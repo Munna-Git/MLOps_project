@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual envs
+venv/
+.venv/
+
+# Artifacts
+artifacts/
+mlruns/
+
+# Configs & secrets
+*.env
+
+# OS-specific
+.DS_Store
+Thumbs.db
