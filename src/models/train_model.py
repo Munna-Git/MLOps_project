@@ -55,3 +55,38 @@ def save_model(model: XGBClassifier, filename: str) -> None:
     logging.info(f"Saving model to {filename}.")
     with open(os.path.join(MODEL_OUTPUT_DIR, filename), 'wb') as f:
         pickle.dump(model, f)
+
+def main():
+    # Paths for processed train/test data
+    X_train_path = os.path.join(DATA_DIR, "X_train.pkl")
+    y_train_path = os.path.join(DATA_DIR, "y_train.pkl")
+    X_test_path = os.path.join(DATA_DIR, "X_test.pkl")
+    y_test_path = os.path.join(DATA_DIR, "y_test.pkl")
+
+    # Load train/test data
+    logging.info("Loading processed training and testing data.")
+    with open(X_train_path, "rb") as f:
+        X_train = pickle.load(f)
+    with open(y_train_path, "rb") as f:
+        y_train = pickle.load(f)
+    with open(X_test_path, "rb") as f:
+        X_test = pickle.load(f)
+    with open(y_test_path, "rb") as f:
+        y_test = pickle.load(f)
+
+    logging.info(f"Training data shape: {X_train.shape}, Test data shape: {X_test.shape}")
+
+    # Train model
+    model = train_xgb_model(X_train, y_train)
+
+    # Evaluate model
+    y_pred = evaluate_model(model, X_test, y_test)
+
+    # Save trained model
+    save_model(model, MODEL_FILENAME)
+
+    logging.info("Training pipeline completed successfully.")
+
+
+if __name__ == "__main__":
+    main()
