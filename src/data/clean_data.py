@@ -9,7 +9,7 @@ warnings.filterwarnings('ignore')
 # Base Class for Data Pipelines
 class DataPipeline(ABC):
     def __init__(self, input_filepath : str, output_filepath : str):
-        self.input_filepth = input_filepath
+        self.input_filepath = input_filepath
         self.output_filepath = output_filepath
 
     def load_data(self) -> DataFrame:
