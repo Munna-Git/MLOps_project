@@ -1,3 +1,5 @@
+# app/inference_entrypoint.py
+
 from flask import Flask, jsonify, request
 from dotenv import load_dotenv
 import os
@@ -6,6 +8,7 @@ import pandas as pd
 import shap
 import logging
 import sys
+
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from src.data.clean_data import InferencePipeline
@@ -24,6 +27,12 @@ MODEL_PATH = os.getenv("MODEL_PATH")
 TEST_DATA_PATH = os.getenv("TEST_DATA_PATH")
 INFERENCE_CLEANED_PATH = os.getenv("INFERENCE_CLEANED_PATH")
 
+# Check environment variables
+if None in [MODEL_PATH, TEST_DATA_PATH, INFERENCE_CLEANED_PATH]:
+    logging.error("Missing one or more required environment variables. Please check your .env file.")
+    raise ValueError("Environment variable configuration error.")
+
+# Load model
 try:
     with open(MODEL_PATH, 'rb') as model_file:
         model = pickle.load(model_file)
@@ -32,14 +41,21 @@ except Exception as e:
     logging.error(f"Error loading model: {e}")
     raise
 
-# Initialize SHAP explainer
-explainer = shap.Explainer(model)
+# Initialize SHAP explainer AFTER model loads
+try:
+    explainer = shap.Explainer(model)
+except Exception as e:
+    logging.error(f"Error initializing SHAP explainer: {e}")
+    explainer = None
 
 # Define Inference Pipeline
-inference_pipeline = InferencePipeline(input_filepath=TEST_DATA_PATH, output_filepath=INFERENCE_CLEANED_PATH)
+inference_pipeline = InferencePipeline(
+    input_filepath=TEST_DATA_PATH,
+    output_filepath=INFERENCE_CLEANED_PATH
+)
 
 
-def get_customer_data(customer_id: int) -> pd.DataFrame:
+def get_customer_data(customer_id: int) -> pd.DataFrame | None:
     """Retrieve data for a given customer ID after preprocessing."""
     logging.info(f"Retrieving data for customer ID: {customer_id}")
     try:
@@ -49,10 +65,14 @@ def get_customer_data(customer_id: int) -> pd.DataFrame:
         # Load the cleaned dataset
         df = pd.read_csv(INFERENCE_CLEANED_PATH)
 
+        # Ensure CustomerId column exists before filtering
+        if "CustomerId" not in df.columns:
+            logging.error("CustomerId column not found in cleaned dataset.")
+            return None
+
         # Filter the DataFrame for the given customer ID
         client_data = df[df['CustomerId'] == customer_id]
 
-        # Check if client data exists
         if client_data.empty:
             logging.warning(f"Customer ID {customer_id} not found.")
             return None
@@ -67,6 +87,7 @@ def get_customer_data(customer_id: int) -> pd.DataFrame:
 
 @app.route('/score/<int:customer_id>', methods=['GET'])
 def score(customer_id):
+    """API endpoint for scoring a customer and returning SHAP explanations."""
     client_data = get_customer_data(customer_id)
 
     if client_data is None:
@@ -76,17 +97,20 @@ def score(customer_id):
         # Make prediction
         prediction = model.predict(client_data)
 
-        # Calculate SHAP values
-        shap_values = explainer(client_data)
+        # Calculate SHAP values (only if explainer is available)
+        shap_values = None
+        if explainer:
+            shap_values = explainer(client_data)
+            shap_values_list = shap_values.values.tolist()
+        else:
+            shap_values_list = [[]]
 
-        # Convert SHAP values to a format that can be returned as JSON
-        shap_values_list = shap_values.values.tolist()
         feature_names = client_data.columns.tolist()
 
         response = {
             "customer_id": customer_id,
-            "prediction": int(prediction[0]),  # Assuming binary classification (0 or 1)
-            "shap_values": dict(zip(feature_names, shap_values_list[0]))
+            "prediction": int(prediction[0]),  # Assuming binary classification
+            "shap_values": dict(zip(feature_names, shap_values_list[0])) if shap_values else {}
         }
 
         logging.info(f"Prediction and SHAP values computed for customer ID: {customer_id}")
@@ -94,12 +118,21 @@ def score(customer_id):
 
     except Exception as e:
         error_line = e.__traceback__.tb_lineno
-        error_type = str(type(e).__name__)
+        error_type = type(e).__name__
         error_message = str(e)
-        logging.error(f"Error during prediction for customer ID {customer_id}: Line {error_line}, Type: {error_type}, Message: {error_message}")
+        logging.error(f"Error during prediction for customer ID {customer_id}: "
+                      f"Line {error_line}, Type: {error_type}, Message: {error_message}")
 
-        return jsonify({"error": f"An error occurred during prediction: Line {error_line}, Type: {error_type}, Message: {error_message}"}), 500
+        return jsonify({
+            "error": f"An error occurred during prediction",
+            "details": {
+                "line": error_line,
+                "type": error_type,
+                "message": error_message
+            }
+        }), 500
 
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=80)
+    # Use a safer port (5000 is standard for Flask)
+    app.run(host='0.0.0.0', port=5000)

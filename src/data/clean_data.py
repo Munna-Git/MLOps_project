@@ -7,7 +7,6 @@ import warnings
 warnings.filterwarnings('ignore')
 
 
-# Base Class for Data Pipelines
 class DataPipeline(ABC):
     def __init__(self, input_filepath: str, output_filepath: str):
         self.input_filepath = input_filepath
@@ -28,12 +27,15 @@ class DataPipeline(ABC):
     def drop_columns(self, df: DataFrame) -> DataFrame:
         """Drop unnecessary columns (default behavior)."""
         columns_to_drop = ["RowNumber", "Surname", "Complain"]
-        return df.drop(columns=columns_to_drop)
+        return df.drop(columns=columns_to_drop, errors='ignore')
 
     def rename_columns(self, df: DataFrame) -> DataFrame:
         """Rename columns for consistency."""
+        # Strip extra spaces/tabs from column names
+        df.columns = df.columns.str.strip()
+
         df.rename(columns={
-            'Satisfaction Score\t': 'SatisfactionScore',
+            'Satisfaction Score': 'SatisfactionScore',
             'Card Type': 'CardType',
             'Point Earned': 'PointEarned'
         }, inplace=True)
@@ -44,7 +46,7 @@ class DataPipeline(ABC):
         df = pd.get_dummies(df, columns=['Geography'], prefix='Geography')
         df = pd.get_dummies(df, columns=['Gender'], prefix='Gender')
         card_mapping = {'SILVER': 0, 'GOLD': 1, 'PLATINUM': 2, 'DIAMOND': 3}
-        df['CardType'] = df['CardType'].map(card_mapping)
+        df['CardType'] = df['CardType'].map(card_mapping).fillna(-1)
         return df
 
     @abstractmethod
@@ -53,12 +55,11 @@ class DataPipeline(ABC):
         pass
 
 
-# Training Pipeline Class
 class TrainingPipeline(DataPipeline):
     def drop_columns(self, df: DataFrame) -> DataFrame:
-        """Drop unnecessary columns for training."""
+        """Drop unnecessary columns for training (remove ID fields)."""
         columns_to_drop = ["RowNumber", "Surname", "Complain", "CustomerId"]
-        return df.drop(columns=columns_to_drop)
+        return df.drop(columns=columns_to_drop, errors='ignore')
 
     def preprocess(self) -> None:
         """Preprocess data for training."""
@@ -70,12 +71,11 @@ class TrainingPipeline(DataPipeline):
         print(f"Training data saved to {self.output_filepath}")
 
 
-# Inference Pipeline Class
 class InferencePipeline(DataPipeline):
     def preprocess(self) -> None:
-        """Preprocess data for inference (retain `CustomerId`)."""
+        """Preprocess data for inference (retain `CustomerId`, drop `Surname`)."""
         df = self.load_data()
-        df = self.drop_columns(df)  # Uses default behavior, retaining `Surname`
+        df = self.drop_columns(df)  # Base drop_columns keeps CustomerId
         df = self.rename_columns(df)
         df = self.encode_categorical_features(df)
         self.save_data(df)
