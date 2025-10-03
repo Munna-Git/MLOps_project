@@ -117,4 +117,3 @@ def plot_model_evaluation(y_true: np.ndarray, y_pred: np.ndarray, y_prob: np.nda
 
     plt.tight_layout()
     plt.show()
-    
