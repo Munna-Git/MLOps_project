@@ -105,7 +105,7 @@ def plot_model_evaluation(y_true: np.ndarray, y_pred: np.ndarray, y_prob: np.nda
     
     # Calculate the area under the PR curve (AUPRC)
     pr_auc = auc(recall_curve, precision_curve)
-    
+
     plt.subplot(1, 3, 3)
     plt.plot(recall_curve, precision_curve, color='green', lw=2, label=f'PR curve (area = {pr_auc:.2f})')
     plt.xlim([0.0, 1.0])
@@ -117,3 +117,4 @@ def plot_model_evaluation(y_true: np.ndarray, y_pred: np.ndarray, y_prob: np.nda
 
     plt.tight_layout()
     plt.show()
+    
