@@ -85,6 +85,20 @@ def get_customer_data(customer_id: int) -> pd.DataFrame | None:
         return None
 
 
+@app.route('/', methods=['GET'])
+def home():
+    """Health check endpoint."""
+    return jsonify({
+        'status': 'running',
+        'message': 'Customer Churn Prediction API',
+        'endpoints': {
+            'predict_with_shap': '/score/<customer_id> [GET]',
+            'predict_simple': '/<customer_id> [GET]',
+            'health': '/ [GET]'
+        }
+    }), 200
+
+
 @app.route('/score/<int:customer_id>', methods=['GET'])
 def score(customer_id):
     """API endpoint for scoring a customer and returning SHAP explanations."""
@@ -133,6 +147,70 @@ def score(customer_id):
         }), 500
 
 
+@app.route('/<int:customer_id>', methods=['GET'])
+def predict_simple(customer_id):
+    """
+    Simplified endpoint for quick predictions without SHAP values.
+    This fixes the 404 error when accessing /15619304 directly.
+    
+    Example: GET /15619304
+    """
+    client_data = get_customer_data(customer_id)
+
+    if client_data is None:
+        return jsonify({"error": "Customer not found"}), 404
+
+    try:
+        # Make prediction
+        prediction = model.predict(client_data)
+
+        response = {
+            "customer_id": customer_id,
+            "prediction": int(prediction[0]),
+            "message": "Use /score/<customer_id> for SHAP explanations"
+        }
+
+        logging.info(f"Prediction computed for customer ID: {customer_id}")
+        return jsonify(response)
+
+    except Exception as e:
+        error_line = e.__traceback__.tb_lineno
+        error_type = type(e).__name__
+        error_message = str(e)
+        logging.error(f"Error during prediction for customer ID {customer_id}: "
+                      f"Line {error_line}, Type: {error_type}, Message: {error_message}")
+
+        return jsonify({
+            "error": f"An error occurred during prediction",
+            "details": {
+                "line": error_line,
+                "type": error_type,
+                "message": error_message
+            }
+        }), 500
+
+
 if __name__ == '__main__':
+    # Validate environment variables and file paths
+    logging.info("="*60)
+    logging.info("Starting Customer Churn Prediction API")
+    logging.info("="*60)
+    logging.info(f"MODEL_PATH: {MODEL_PATH}")
+    logging.info(f"TEST_DATA_PATH: {TEST_DATA_PATH}")
+    logging.info(f"INFERENCE_CLEANED_PATH: {INFERENCE_CLEANED_PATH}")
+    
+    # Check if files exist
+    if not os.path.exists(MODEL_PATH):
+        logging.error(f"Model file not found: {MODEL_PATH}")
+    else:
+        logging.info("✓ Model file found")
+    
+    if not os.path.exists(TEST_DATA_PATH):
+        logging.error(f"Test data file not found: {TEST_DATA_PATH}")
+    else:
+        logging.info("✓ Test data file found")
+    
+    logging.info("="*60)
+    
     # Use a safer port (5000 is standard for Flask)
-    app.run(host='0.0.0.0', port=5000)
+    app.run(host='0.0.0.0', port=5000, debug=True)
