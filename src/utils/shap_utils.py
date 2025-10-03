@@ -45,3 +45,4 @@ def save_shap_summary_plot(model: object, X_test: pd.DataFrame, output_path: str
     shap.summary_plot(shap_values, X_test, show=False)
     plt.savefig(output_path)
     plt.close()
+    
