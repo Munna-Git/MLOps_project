@@ -2,6 +2,8 @@ from abc import ABC, abstractmethod
 import pandas as pd
 from pandas import DataFrame
 import warnings
+import logging
+import os
 
 # Suppress warnings
 warnings.filterwarnings('ignore')
@@ -71,12 +73,42 @@ class TrainingPipeline(DataPipeline):
         print(f"Training data saved to {self.output_filepath}")
 
 
-class InferencePipeline(DataPipeline):
+class InferencePipeline:
+    def __init__(self, input_filepath: str, output_filepath: str):
+        self.input_filepath = input_filepath
+        self.output_filepath = output_filepath
+
     def preprocess(self) -> None:
-        """Preprocess data for inference (retain `CustomerId`, drop `Surname`)."""
-        df = self.load_data()
-        df = self.drop_columns(df)  # Base drop_columns keeps CustomerId
-        df = self.rename_columns(df)
-        df = self.encode_categorical_features(df)
-        self.save_data(df)
-        print(f"Inference data saved to {self.output_filepath}")
+        """
+        Load raw inference data, clean it, and save to output filepath.
+        Keeps CustomerId for traceability.
+        """
+        logging.info(f"Loading inference data from {self.input_filepath}")
+        df = pd.read_csv(self.input_filepath)
+
+        # Example cleaning (adjust this part as per your training pipeline steps)
+        # ✅ Keep CustomerId
+        if "CustomerId" in df.columns:
+            customer_ids = df["CustomerId"]
+        else:
+            logging.warning("CustomerId column not found in raw inference data.")
+            customer_ids = None
+
+        # Drop irrelevant columns (but NOT CustomerId)
+        drop_cols = ["Surname"]  # example
+        df = df.drop(columns=[col for col in drop_cols if col in df.columns])
+
+        # Convert categorical features (example: Geography, Gender)
+        if "Geography" in df.columns:
+            df = pd.get_dummies(df, columns=["Geography"], drop_first=True)
+        if "Gender" in df.columns:
+            df["Gender"] = df["Gender"].map({"Male": 1, "Female": 0})
+
+        # Reattach CustomerId at the start
+        if customer_ids is not None:
+            df.insert(0, "CustomerId", customer_ids)
+
+        # Save cleaned inference data
+        os.makedirs(os.path.dirname(self.output_filepath), exist_ok=True)
+        df.to_csv(self.output_filepath, index=False)
+        logging.info(f"Inference data saved to {self.output_filepath}")
