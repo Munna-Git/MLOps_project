@@ -1,13 +1,6 @@
+
 import unittest
-import sys
-import os
-
-# Add the src directory to sys.path dynamically
-current_dir = os.path.dirname(os.path.abspath(__file__))
-src_path = os.path.join(current_dir, '..', 'src')
-sys.path.insert(0, src_path)
-
-from data.clean_data import preprocess
+from src.data.clean_data import preprocess
 
 class TestPreprocessData(unittest.TestCase):
 
