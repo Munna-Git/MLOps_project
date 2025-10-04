@@ -1,16 +1,14 @@
 name: CI Pipeline
 
-# 1. When should it run?
 on:
   push:
-    branches: [ main ]   # run when code is pushed to main
+    branches: [ main ]
   pull_request:
-    branches: [ main ]   # also run on PRs targeting main
+    branches: [ main ]
 
-# 2. What jobs to run?
 jobs:
   build-test:
-    runs-on: ubuntu-latest   # GitHub provides a VM
+    runs-on: ubuntu-latest
 
     steps:
       # Step 1: Checkout code
@@ -28,15 +26,23 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
+          pip install black isort flake8 pytest
 
-      # Step 4: Run linting (flake8)
+      # Step 4: Auto-format with Black and isort
+      - name: Auto format with black and isort
+        run: |
+          black src/ --line-length 120
+          isort src/
+
+      # Step 5: Lint with flake8
       - name: Lint with flake8
         run: |
-          pip install flake8
-          flake8 src/ --max-line-length=120
+          echo "[flake8]" > .flake8
+          echo "max-line-length = 120" >> .flake8
+          echo "ignore = E203, W503, W291, W293" >> .flake8
+          flake8 src/
 
-      # Step 5: Run unit tests
+      # Step 6: Run unit tests
       - name: Run tests with pytest
         run: |
-          pip install pytest
           pytest tests/

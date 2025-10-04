@@ -20,11 +20,11 @@ import matplotlib.pyplot as plt
 def calculate_f2_score(precision: float, recall: float) -> float:
     """
     Manually calculate the F2-Score using precision and recall.
-    
+
     Parameters:
     - precision (float): Precision of the model.
     - recall (float): Recall of the model.
-    
+
     Returns:
     - float: F2-Score.
     """
@@ -64,7 +64,7 @@ def get_model_metrics(y_true: np.ndarray, y_pred: np.ndarray) -> dict:
 def plot_model_evaluation(y_true: np.ndarray, y_pred: np.ndarray, y_prob: np.ndarray, model_name: str) -> None:
     """
     Generate and display model evaluation visualizations.
-    
+
     Parameters:
     - y_true (np.ndarray): True labels of the validation dataset.
     - y_pred (np.ndarray): Predicted labels from the model.
@@ -77,7 +77,7 @@ def plot_model_evaluation(y_true: np.ndarray, y_pred: np.ndarray, y_prob: np.nda
     # 1. Confusion Matrix
     conf_matrix = confusion_matrix(y_true, y_pred)
     plt.figure(figsize=(18, 5))
-    
+
     plt.subplot(1, 3, 1)
     sns.heatmap(conf_matrix, annot=True, fmt='d', cmap='Blues')
     plt.title(f'Confusion Matrix for {model_name}')
@@ -88,7 +88,7 @@ def plot_model_evaluation(y_true: np.ndarray, y_pred: np.ndarray, y_prob: np.nda
     # Calculate ROC curve components (False Positive Rate, True Positive Rate)
     fpr, tpr, _ = roc_curve(y_true, y_prob)
     roc_auc = auc(fpr, tpr)
-    
+
     plt.subplot(1, 3, 2)
     plt.plot(fpr, tpr, color='darkorange', lw=2, label=f'ROC curve (area = {roc_auc:.2f})')
     plt.plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--')
@@ -102,7 +102,7 @@ def plot_model_evaluation(y_true: np.ndarray, y_pred: np.ndarray, y_prob: np.nda
     # 3. Precision-Recall Curve
     # Calculate Precision-Recall curve components
     precision_curve, recall_curve, _ = precision_recall_curve(y_true, y_prob)
-    
+
     # Calculate the area under the PR curve (AUPRC)
     pr_auc = auc(recall_curve, precision_curve)
 
