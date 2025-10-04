@@ -32,7 +32,8 @@ class TestInferencePipeline(unittest.TestCase):
             "NumOfProducts": [1, 1],
             "HasCrCard": [1, 0],
             "IsActiveMember": [1, 1],
-            "EstimatedSalary": [101348.88, 112542.58]
+            "EstimatedSalary": [101348.88, 112542.58],
+            "CardType": ["SILVER", "GOLD"]
         }
         df = pd.DataFrame(data)
         df.to_csv(self.input_file, index=False)
