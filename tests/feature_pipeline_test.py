@@ -1,5 +1,12 @@
-
 import unittest
+import sys
+import os
+
+# --- Add this block ---
+# Get the absolute path to the project root
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+# ----------------------
+
 from src.data.clean_data import preprocess
 
 class TestPreprocessData(unittest.TestCase):
