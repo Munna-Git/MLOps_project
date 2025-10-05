@@ -1,5 +1,6 @@
 # Project structure
 
+```
 mlops_project/
 │
 ├── app/
@@ -44,3 +45,4 @@ mlops_project/
 ├── README.md                            # Project overview and documentation
 ├── .gitignore                           # Ignored files and directories
 └── venv/                                # Virtual environment (optional, not tracked)
+```
