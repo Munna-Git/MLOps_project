@@ -1,3 +1,7 @@
+#!/bin/bash
+# entrypoint-wrapper.sh
+
+
 # Run the training script first
 python app/train_entrypoint.py
 

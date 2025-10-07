@@ -23,7 +23,7 @@ COPY src /app/src
 COPY . /app/
 
 # 9. Set environment variable to include src in PYTHONPATH
-ENV PYTHONPATH="${PYTHONPATH}:/app/src/"
+ENV PYTHONPATH=/app/src
 
 # 10. Copy and make entrypoint script executable
 COPY entrypoint-wrapper.sh /app/entrypoint-wrapper.sh
