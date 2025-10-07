@@ -1,0 +1,41 @@
+# Ignore Python cache and compiled files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.db
+*.log
+
+# Ignore virtual environments
+venv/
+.env/
+.venv/
+
+# Ignore version control
+.git/
+.gitignore
+
+# Ignore Docker files not needed in the image
+Dockerfile
+.dockerignore
+
+# Ignore local notebooks and data files
+*.ipynb
+data/
+datasets/
+notebooks/
+
+# Ignore model artifacts if they’re large
+models/
+checkpoints/
+artifacts/
+*.pkl
+*.joblib
+*.h5
+*.onnx
+
+# Ignore test outputs
+tests/__pycache__/
+outputs/
+logs/
+tmp/
