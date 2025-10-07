@@ -16,11 +16,12 @@ COPY requirements.txt /app/
 # 6. Install dependencies specified in the requirements file
 RUN python -m pip install --no-cache-dir -r requirements.txt
 
-# 7. Copy the src folder to the app directory inside the container
+# 7. Copy the src folder to the app directory inside the container and the rest of the application code into the container
 COPY src /app/src
-
-# 8. Copy the rest of the application code into the container
 COPY . /app/
+
+# 8. Copy Docker-specific environment file
+COPY .env.docker /app/.env
 
 # 9. Set environment variable to include src in PYTHONPATH
 ENV PYTHONPATH=/app/src
