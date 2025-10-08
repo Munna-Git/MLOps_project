@@ -28,9 +28,9 @@ mlops_project/
 │   ├── xgboost_model.pkl                # Saved trained model(s)
 │
 ├── notebooks/
-│   ├── 01_load_and_validate.ipynb           # Initial data exploration and EDA
+│   ├── 01_load_and_validate.ipynb           
 │   ├── 02_clean_and_transform_raw_data.ipynb
-│   ├── 03_train_test_split.ipynb          # Model experimentation and tuning
+│   ├── 03_train_test_split.ipynb          
 │   ├── 03_train_random_forest.ipynb
 │   ├── 03_train_xgb.ipynb 
 │
@@ -40,7 +40,13 @@ mlops_project/
 ├── .github\
 │   ├── workflows\
 │       ├── ci.yml 
+│       ├── cd.yml 
 ├── .env                                 # Environment variables (paths, configs)
+├── Dockerfile
+├── .dockerignore
+├── .env.docker
+├── entrypoint-wrapper.sh
+├── run.sh
 ├── requirements.txt                     # Python dependencies
 ├── README.md                            # Project overview and documentation
 ├── .gitignore                           # Ignored files and directories
