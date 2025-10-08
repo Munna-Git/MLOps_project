@@ -9,3 +9,5 @@ run:
 
 logs:
 	docker ps -a
+
+# Now u can just type make build and make run
