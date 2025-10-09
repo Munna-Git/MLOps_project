@@ -1,9 +1,7 @@
 # MLOps Project: End-to-End Pipeline for Robust Model Deployment
 
 > **Elevator Pitch:**  
-> A production-grade MLOps framework for scalable, reliable, and explainable machine learning — from feature engineering to CI/CD and containerized inference.
-
-![Build Status](<GITHUB_ACTIONS_BADGE_URL>) ![Docker Pulls](<DOCKER_PULLS_BADGE_URL>) ![PyPI Status](<PYPI_BADGE_URL>) ![License](<LICENSE_BADGE_URL>) ![Code Coverage](<CODE_COVERAGE_BADGE_URL>)
+> This repository delivers a modular, production-ready MLOps pipeline built with Python, Flask, Docker, and automated CI/CD. It efficiently manages the full ML lifecycle from feature engineering and training to containerized deployment and robust validation, with integrated explainability and data quality checks for enterprise-scale reliability.
 
 ---
 
@@ -64,115 +62,143 @@ This repository provides a robust, production-ready MLOps pipeline designed for 
 - **Great Expectations:** Implements data quality checks and validation throughout the pipeline.
 - **SHAP:** Provides model explainability, enabling feature impact analysis for stakeholders.
 - **Pydantic:** Enforces data schemas and validation in API endpoints.
-- **Optional:**  
-  - **scikit-learn, xgboost:** Advanced modeling and ML algorithms.
-  - **mlflow:** Experiment tracking and model registry.
-  - **fastapi:** Optional for alternative API implementations.
+- **scikit-learn, xgboost:** Advanced modeling and ML algorithms.
 
 ---
 
-## Architecture & Data Flow
+## Overall System Architecture
 
-### Overall System Architecture
-
-![System architecture](fti_architecture.jpg "Architecture diagram showing modular pipeline, CI/CD and deployment stages")
-
-*Alt text: System architecture diagram for the MLOps pipeline, illustrating modular components and data flow from ingestion to deployment.*
-
-### Feature Engineering Pipeline
-
-![Feature pipeline](feature_pipeline.jpg "Feature engineering pipeline: raw data to model-ready features")
-
-*Alt text: Diagram of feature engineering pipeline steps.*
-
-### Model Training Pipeline
-
-![Training pipeline](training_pipeline.jpg "Training pipeline: data cleaning, splitting, modeling, and evaluation")
-
-*Alt text: Diagram showing the process of training, validation, and model persistence.*
-
-### Inference Pipeline
-
-![Inference pipeline](inference_pipeline.jpg "Inference pipeline: serving predictions via API")
-
-*Alt text: Diagram illustrating REST API serving for real-time predictions.*
-
-### Optimization Strategies
-
-![Optimization strategies](optimization_strategies.jpg "Optimization strategies applied in modeling and deployment")
-
-*Alt text: Diagram of optimization strategies, such as hyperparameter tuning and resource scaling.*
+```
+mlops_project/
+│
+├── app/
+│   ├── train_entrypoint.py              # Entrypoint for training pipeline (UPDATED)
+│   ├── inference_entrypoint.py          # Entrypoint for inference/prediction API (UPDATED)
+│
+├── src/
+│   ├── data/
+│   │   ├── clean_data.py                # Data cleaning and preprocessing logic (UPDATED)
+│   │   ├── train_test_split.py          # Train-test splitting functions
+│   │
+│   ├── models/
+│   │   ├── train_model.py               # Model training logic
+│   │   ├── evaluate_models.py           # Model evaluation and metrics computation
+│   │
+│   ├── utils/
+│   │   ├── shap_utils.py                # SHAP explainability utilities
+│   │
+│   ├── schemas/                          # NEW: Pydantic validation schemas
+│   │   ├── __init__.py
+│   │   ├── data_schemas.py              # Data validation schemas
+│   │   ├── config_schemas.py            # Configuration management schemas
+│   │   ├── model_schemas.py             # API & model metadata schemas
+│   │
+│   ├── validation/                       # NEW: Great Expectations data quality
+│   │   ├── __init__.py
+│   │   ├── ge_utils.py                  # Great Expectations utilities
+│   │   ├── create_expectations.py       # Expectation suite definitions
+│   │   ├── expectations/                # Generated expectation suites
+│   │   ├── checkpoints/                 # Validation checkpoints
+│   │   ├── uncommitted/                 # GE runtime files (gitignored)
+│
+├── data/
+│   ├── raw/                             # Raw input data
+│   ├── cleaned/                         # Cleaned datasets after preprocessing
+│   ├── processed/                       # Processed datasets ready for modeling
+│
+├── models/
+│   ├── xgboost_model.pkl                # Saved trained model(s)
+│   ├── xgboost_model_metadata.json      # NEW: Model metadata and metrics
+│
+├── notebooks/
+│   ├── 01_load_and_validate.ipynb           
+│   ├── 02_clean_and_transform_raw_data.ipynb
+│   ├── 03_train_test_split.ipynb          
+│   ├── 03_train_random_forest.ipynb
+│   ├── 03_train_xgb.ipynb 
+│
+├── test/
+│   ├── feature_pipeline_test.py         # Unit tests for pipelines (UPDATED)
+│
+├── scripts/                              # NEW: Setup and utility scripts
+│   ├── setup_great_expectations.py      # Initialize Great Expectations
+│   ├── test_integration.py              # Integration testing script
+│
+├── .github/
+│   ├── workflows/
+│       ├── ci.yml 
+│       ├── cd.yml 
+│
+├── .env                                 # Environment variables (paths, configs)
+├── Dockerfile
+├── .dockerignore
+├── .env.docker
+├── entrypoint-wrapper.sh
+├── run.sh
+├── requirements.txt                     # Python dependencies (UPDATED)
+├── README.md                            # Project overview and documentation
+├── README_PYDANTIC_GE.md               # NEW: Pydantic & GE integration guide
+├── QUICKSTART.md                       # NEW: Quick start guide
+├── IMPLEMENTATION_SUMMARY.md           # NEW: Implementation summary
+├── INSTALLATION_GUIDE.md               # NEW: Step-by-step installation
+├── .gitignore                          # Ignored files and directories (UPDATED)
+└── venv/                               # Virtual environment (optional, not tracked)
+```
 
 ---
 
 ## Feature & Training Pipeline
 
-- **Data Ingestion:** Loads raw datasets from `/data` using modular loader scripts (see `<PATH_TO_DATA_LOADER>`).
-- **Feature Engineering:** Applies cleaning, transformation, and feature selection (see `<PATH_TO_FEATURE_PIPELINE>`).
-- **Training:** Trains models using scikit-learn or XGBoost, with parameter tuning and cross-validation (see `<PATH_TO_TRAINING_SCRIPT>`).
+- **Data Ingestion:** Loads raw datasets from `/data` using modular loader scripts.
+- **Feature Engineering:** Applies cleaning, transformation, and feature selection.
+- **Training:** Trains models using scikit-learn or XGBoost, with parameter tuning and cross-validation.
 - **Model Persistence:** Saves trained models to `/models` for deployment and future inference.
 - **Testing:** Validates pipeline steps via unit tests in `/tests` and Great Expectations checks.
 
 ---
 
-## How to run (Local Quickstart)
+## How to Run
 
-### 1. Environment Setup
+1. **Clone the Repository**
+    ```bash
+    git clone https://github.com/Munna-Git/MLOps_project.git
+    cd MLOps_project
+    ```
 
-```bash
-python -m venv venv
-source venv/bin/activate  # or venv\Scripts\activate on Windows
-pip install -r requirements.txt
-```
+2. **Install Dependencies**
+    ```bash
+    pip install -r requirements.txt
+    ```
 
-### 2. Run Training
+3. **Configure Environment**
+    - Edit `.env` file with your paths and settings.
 
-```bash
-python <PATH_TO_TRAINING_SCRIPT>
-```
+4. **Run the Training Pipeline**
+    ```bash
+    python app/train_entrypoint.py
+    ```
 
-### 3. Start Flask Server
+5. **Start the Inference API**
+    ```bash
+    python app/inference_entrypoint.py
+    ```
 
-```bash
-export FLASK_APP=<PATH_TO_FLASK_APP>
-flask run
-```
+6. **Run Notebooks**
+    - Open Jupyter and run any notebook in `notebooks/` for interactive EDA and modeling.
 
-### 4. Run Inference (example)
+7. **Run Tests**
+    ```bash
+    pytest test/
+    ```
 
-```bash
-curl -X POST -H "Content-Type: application/json" \
-    -d '{"input_data": <SAMPLE_INPUT_JSON>}' \
-    http://localhost:5000/<ENDPOINT_URL>
-```
-
----
-
-## Docker usage
-
-### Build
-
-```bash
-docker build -t mlops_project .
-```
-
-### Sample .env.docker
-
-```env
-DATA_PATH=/app/data
-MODEL_PATH=/app/models
-```
-
-### Run with Volumes
-
-```bash
-docker run -it --rm -p 5000:5000 \
-  -v /local/path/to/data:/app/data \
-  -v /local/path/to/models:/app/models \
-  --env-file .env.docker \
-  mlops_project
-```
-
+8. **Docker Deployment**
+    ```bash
+    docker build -t churn-mlops .
+    docker run -it --rm -p 5000:5000 ^
+        -v D:/mlops_project/data:/app/data ^
+        -v D:/mlops_project/models:/app/models ^
+        mlops_project
+    ```
 *This mounts local data and model directories into the container for persistent access.*
 
 ---
@@ -259,7 +285,7 @@ docker run -it --rm -p 5000:5000 \
 
 - **Model Outputs:** Predictions can be retrieved via API or CLI, including feature attributions and confidence scores.
 - **Key Metrics:**  
-  - `<MODEL_METRIC_PLACEHOLDER>` — fill in with relevant metrics (AUC, accuracy, F1, etc.)
+  - `f2_score`
 - **Interpretation:**  
   - Use SHAP visualizations and Great Expectations validation results to understand model behavior and data quality.
 
@@ -274,42 +300,3 @@ docker run -it --rm -p 5000:5000 \
 - Enhance CI with coverage reports and security scanning.
 
 ---
-
-## Contributing, License, Contact
-
-- **Contributing:**  
-  Pull requests and issues are welcome. Please follow the contributing guidelines (see `<CONTRIBUTING_MD_PATH>`).
-
-- **License:**  
-  This project is licensed under the `<LICENSE_TYPE>` license (see `<LICENSE_PATH>`).
-
-- **Contact:**  
-  For inquiries, reach out via [GitHub Issues](<REPO_ISSUES_URL>) or email: `<CONTACT_EMAIL_PLACEHOLDER>`
-
----
-
----
-
-## Checklist for the repo owner
-
-- [ ] Insert actual model metrics in `<MODEL_METRIC_PLACEHOLDER>`.
-- [ ] Add demo GIFs or screenshots showing training and inference.
-- [ ] Replace badge URLs with actual links.
-- [ ] Fill `<PATH_TO_TRAINING_SCRIPT>`, `<PATH_TO_FLASK_APP>`, `<ENDPOINT_URL>`, `<PATH_TO_MODEL>`, etc.
-- [ ] Add DockerHub image tag and repository link.
-- [ ] Update license type and contact email.
-- [ ] Link to contributing guidelines.
-- [ ] Validate images are present and paths are correct.
-- [ ] Confirm test coverage and CI status badges.
-
----
-
-## Pitch variants
-
-### For a technical lead
-
-This repository delivers a modular, production-ready MLOps pipeline built with Python, Flask, Docker, and automated CI/CD. It efficiently manages the full ML lifecycle from feature engineering and training to containerized deployment and robust validation, with integrated explainability and data quality checks for enterprise-scale reliability.
-
-### For a recruiter / hiring manager
-
-A robust MLOps solution enabling automated, scalable, and transparent ML deployment. The project demonstrates cloud-native engineering and best practices, ensuring business-ready machine learning with explainability, validation, and seamless integration into existing workflows.
