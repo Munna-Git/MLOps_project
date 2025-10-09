@@ -1,5 +1,6 @@
 # Project structure
 
+# Current project structure
 ```
 mlops_project/
 │
@@ -53,9 +54,84 @@ mlops_project/
 └── venv/                                # Virtual environment (optional, not tracked)
 ```
 
+# The structure to updtade-to
 
-Here is a detailed README template for your repo, designed to highlight your advanced MLOps skills and make a strong impression on recruiters. The structure and emphasis are inspired by your reference repo (fti-churn-framework), but this README demonstrates that your project goes further with more features and production-grade practices.
-
+```
+mlops_project/
+│
+├── app/
+│   ├── train_entrypoint.py              # Entrypoint for training pipeline (UPDATED)
+│   ├── inference_entrypoint.py          # Entrypoint for inference/prediction API (UPDATED)
+│
+├── src/
+│   ├── data/
+│   │   ├── clean_data.py                # Data cleaning and preprocessing logic (UPDATED)
+│   │   ├── train_test_split.py          # Train-test splitting functions
+│   │
+│   ├── models/
+│   │   ├── train_model.py               # Model training logic
+│   │   ├── evaluate_models.py           # Model evaluation and metrics computation
+│   │
+│   ├── utils/
+│   │   ├── shap_utils.py                # SHAP explainability utilities
+│   │
+│   ├── schemas/                          # NEW: Pydantic validation schemas
+│   │   ├── __init__.py
+│   │   ├── data_schemas.py              # Data validation schemas
+│   │   ├── config_schemas.py            # Configuration management schemas
+│   │   ├── model_schemas.py             # API & model metadata schemas
+│   │
+│   ├── validation/                       # NEW: Great Expectations data quality
+│   │   ├── __init__.py
+│   │   ├── ge_utils.py                  # Great Expectations utilities
+│   │   ├── create_expectations.py       # Expectation suite definitions
+│   │   ├── expectations/                # Generated expectation suites
+│   │   ├── checkpoints/                 # Validation checkpoints
+│   │   ├── uncommitted/                 # GE runtime files (gitignored)
+│
+├── data/
+│   ├── raw/                             # Raw input data
+│   ├── cleaned/                         # Cleaned datasets after preprocessing
+│   ├── processed/                       # Processed datasets ready for modeling
+│
+├── models/
+│   ├── xgboost_model.pkl                # Saved trained model(s)
+│   ├── xgboost_model_metadata.json      # NEW: Model metadata and metrics
+│
+├── notebooks/
+│   ├── 01_load_and_validate.ipynb           
+│   ├── 02_clean_and_transform_raw_data.ipynb
+│   ├── 03_train_test_split.ipynb          
+│   ├── 03_train_random_forest.ipynb
+│   ├── 03_train_xgb.ipynb 
+│
+├── test/
+│   ├── feature_pipeline_test.py         # Unit tests for pipelines (UPDATED)
+│
+├── scripts/                              # NEW: Setup and utility scripts
+│   ├── setup_great_expectations.py      # Initialize Great Expectations
+│   ├── test_integration.py              # Integration testing script
+│
+├── .github/
+│   ├── workflows/
+│       ├── ci.yml 
+│       ├── cd.yml 
+│
+├── .env                                 # Environment variables (paths, configs)
+├── Dockerfile
+├── .dockerignore
+├── .env.docker
+├── entrypoint-wrapper.sh
+├── run.sh
+├── requirements.txt                     # Python dependencies (UPDATED)
+├── README.md                            # Project overview and documentation
+├── README_PYDANTIC_GE.md               # NEW: Pydantic & GE integration guide
+├── QUICKSTART.md                       # NEW: Quick start guide
+├── IMPLEMENTATION_SUMMARY.md           # NEW: Implementation summary
+├── INSTALLATION_GUIDE.md               # NEW: Step-by-step installation
+├── .gitignore                          # Ignored files and directories (UPDATED)
+└── venv/                               # Virtual environment (optional, not tracked)
+```
 ---
 
 # MLOps Project: End-to-End Customer Churn Prediction Pipeline
@@ -275,5 +351,3 @@ This project is for demonstration purposes and does not claim any commercial lic
 **If you're a recruiter, this project demonstrates my ability to build and deploy scalable, production-grade ML systems using modern MLOps practices. I am ready to take on challenging ML engineering roles!**
 
 ---
-
-Let me know if you want any additional sections (badges, MLflow, W&B, etc.) or want to further tailor the README for a specific job application!
