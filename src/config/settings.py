@@ -1,6 +1,6 @@
 # src/config/settings.py
 
-from pydantic import Field, field_validator, ConfigDict
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pathlib import Path
 from typing import Literal
