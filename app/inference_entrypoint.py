@@ -1,216 +1,335 @@
-# app/inference_entrypoint.py
+# app/inference_entrypoint.py - REFACTORED WITH PYDANTIC
 
 from flask import Flask, jsonify, request
-from dotenv import load_dotenv
 import os
 import pickle
 import pandas as pd
 import shap
 import logging
 import sys
+from datetime import datetime
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
+from src.config.settings import get_settings
+from src.schemas.api_schemas import (
+    PredictionRequest,
+    PredictionResponse,
+    PredictionWithSHAPResponse,
+    ErrorResponse,
+    HealthCheckResponse,
+    create_prediction_response,
+    create_shap_response,
+    create_error_response
+)
 from src.data.clean_data import InferencePipeline
+from pydantic import ValidationError
 
-# Load environment variables
-load_dotenv()
+# Get validated settings
+settings = get_settings()
 
-# Initialize basic Flask application
+# Initialize Flask app
 app = Flask(__name__)
 
 # Configure logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-
-# Paths from environment variables
-MODEL_PATH = os.getenv("MODEL_PATH")
-TEST_DATA_PATH = os.getenv("TEST_DATA_PATH")
-INFERENCE_CLEANED_PATH = os.getenv("INFERENCE_CLEANED_PATH")
-
-# Check environment variables
-if None in [MODEL_PATH, TEST_DATA_PATH, INFERENCE_CLEANED_PATH]:
-    logging.error("Missing one or more required environment variables. Please check your .env file.")
-    raise ValueError("Environment variable configuration error.")
-
-# Load model
-try:
-    with open(MODEL_PATH, 'rb') as model_file:
-        model = pickle.load(model_file)
-        logging.info("Model loaded successfully.")
-except Exception as e:
-    logging.error(f"Error loading model: {e}")
-    raise
-
-# Initialize SHAP explainer AFTER model loads
-try:
-    explainer = shap.Explainer(model)
-except Exception as e:
-    logging.error(f"Error initializing SHAP explainer: {e}")
-    explainer = None
-
-# Define Inference Pipeline
-inference_pipeline = InferencePipeline(
-    input_filepath=TEST_DATA_PATH,
-    output_filepath=INFERENCE_CLEANED_PATH
+logging.basicConfig(
+    level=getattr(logging, settings.log_level),
+    format='%(asctime)s - %(levelname)s - %(message)s'
 )
+logger = logging.getLogger(__name__)
+
+# Global variables for model and explainer
+model = None
+explainer = None
+inference_pipeline = None
+
+
+def initialize_app():
+    """Initialize model, explainer, and pipeline with validation"""
+    global model, explainer, inference_pipeline
+    
+    logger.info("=" * 60)
+    logger.info("INITIALIZING CUSTOMER CHURN PREDICTION API")
+    logger.info("=" * 60)
+    logger.info(f"Model Path: {settings.model_path}")
+    logger.info(f"Test Data Path: {settings.test_data_path}")
+    logger.info(f"Inference Cleaned Path: {settings.inference_cleaned_path}")
+    
+    # Validate paths exist
+    if not settings.model_path.exists():
+        logger.error(f"✗ Model file not found: {settings.model_path}")
+        raise FileNotFoundError(f"Model file not found: {settings.model_path}")
+    
+    if not settings.test_data_path.exists():
+        logger.error(f"✗ Test data file not found: {settings.test_data_path}")
+        raise FileNotFoundError(f"Test data file not found: {settings.test_data_path}")
+    
+    # Load model
+    try:
+        with open(settings.model_path, 'rb') as model_file:
+            model = pickle.load(model_file)
+        logger.info("✓ Model loaded successfully")
+    except Exception as e:
+        logger.error(f"✗ Error loading model: {e}")
+        raise
+    
+    # Initialize SHAP explainer
+    try:
+        explainer = shap.Explainer(model)
+        logger.info("✓ SHAP explainer initialized")
+    except Exception as e:
+        logger.warning(f"⚠ Could not initialize SHAP explainer: {e}")
+        explainer = None
+    
+    # Initialize inference pipeline
+    try:
+        inference_pipeline = InferencePipeline(
+            input_filepath=str(settings.test_data_path),
+            output_filepath=str(settings.inference_cleaned_path)
+        )
+        logger.info("✓ Inference pipeline initialized")
+    except Exception as e:
+        logger.error(f"✗ Error initializing inference pipeline: {e}")
+        raise
+    
+    logger.info("=" * 60)
+    logger.info("✓ API INITIALIZATION COMPLETE")
+    logger.info("=" * 60)
 
 
 def get_customer_data(customer_id: int) -> pd.DataFrame | None:
-    """Retrieve data for a given customer ID after preprocessing."""
-    logging.info(f"Retrieving data for customer ID: {customer_id}")
+    """Retrieve and preprocess data for a given customer ID"""
+    logger.info(f"Retrieving data for customer ID: {customer_id}")
+    
     try:
-        # Preprocess the test dataset using InferencePipeline
+        # Validate customer_id using Pydantic
+        request_data = PredictionRequest(customer_id=customer_id)
+        
+        # Preprocess the test dataset
         inference_pipeline.preprocess()
-
-        # Load the cleaned dataset
-        df = pd.read_csv(INFERENCE_CLEANED_PATH)
-
-        # Ensure CustomerId column exists before filtering
+        
+        # Load cleaned dataset
+        df = pd.read_csv(settings.inference_cleaned_path)
+        
+        # Check if CustomerId exists
         if "CustomerId" not in df.columns:
-            logging.error("CustomerId column not found in cleaned dataset.")
+            logger.error("CustomerId column not found in cleaned dataset")
             return None
-
-        # Filter the DataFrame for the given customer ID
+        
+        # Filter for customer
         client_data = df[df['CustomerId'] == customer_id]
-
+        
         if client_data.empty:
-            logging.warning(f"Customer ID {customer_id} not found.")
+            logger.warning(f"Customer ID {customer_id} not found")
             return None
-
-        # Drop the CustomerId column before prediction
+        
+        # Drop CustomerId before prediction
         client_data = client_data.drop(columns=['CustomerId'])
+        
+        logger.info(f"✓ Retrieved data for customer {customer_id}: {client_data.shape}")
         return client_data
+        
+    except ValidationError as e:
+        logger.error(f"Validation error for customer_id {customer_id}: {e}")
+        return None
     except Exception as e:
-        logging.error(f"Error retrieving customer data: {e}")
+        logger.error(f"Error retrieving customer data: {e}")
         return None
 
 
 @app.route('/', methods=['GET'])
 def home():
-    """Health check endpoint."""
-    return jsonify({
-        'status': 'running',
-        'message': 'Customer Churn Prediction API',
-        'endpoints': {
-            'predict_with_shap': '/score/<customer_id> [GET]',
-            'predict_simple': '/<customer_id> [GET]',
-            'health': '/ [GET]'
-        }
-    }), 200
-
-
-@app.route('/score/<int:customer_id>', methods=['GET'])
-def score(customer_id):
-    """API endpoint for scoring a customer and returning SHAP explanations."""
-    client_data = get_customer_data(customer_id)
-
-    if client_data is None:
-        return jsonify({"error": "Customer not found"}), 404
-
+    """Health check endpoint with validated response"""
     try:
-        # Make prediction
-        prediction = model.predict(client_data)
-
-        # Calculate SHAP values (only if explainer is available)
-        shap_values = None
-        if explainer:
-            shap_values = explainer(client_data)
-            shap_values_list = shap_values.values.tolist()
-        else:
-            shap_values_list = [[]]
-
-        feature_names = client_data.columns.tolist()
-
-        response = {
-            "customer_id": customer_id,
-            "prediction": int(prediction[0]),  # Assuming binary classification
-            "shap_values": dict(zip(feature_names, shap_values_list[0])) if shap_values else {}
-        }
-
-        logging.info(f"Prediction and SHAP values computed for customer ID: {customer_id}")
-        return jsonify(response)
-
-    except Exception as e:
-        error_line = e.__traceback__.tb_lineno
-        error_type = type(e).__name__
-        error_message = str(e)
-        logging.error(f"Error during prediction for customer ID {customer_id}: "
-                      f"Line {error_line}, Type: {error_type}, Message: {error_message}")
-
-        return jsonify({
-            "error": f"An error occurred during prediction",
-            "details": {
-                "line": error_line,
-                "type": error_type,
-                "message": error_message
+        health_response = HealthCheckResponse(
+            status="running",
+            message="Customer Churn Prediction API",
+            version="1.0.0",
+            model_loaded=model is not None,
+            endpoints={
+                'health': '/ [GET]',
+                'predict_simple': '/<customer_id> [GET]',
+                'predict_with_shap': '/score/<customer_id> [GET]'
             }
-        }), 500
+        )
+        
+        return jsonify(health_response.model_dump()), 200
+        
+    except Exception as e:
+        logger.error(f"Error in health check: {e}")
+        error_response = create_error_response(
+            error="Health check failed",
+            details={"message": str(e)}
+        )
+        return jsonify(error_response.model_dump()), 500
 
 
 @app.route('/<int:customer_id>', methods=['GET'])
-def predict_simple(customer_id):
+def predict_simple(customer_id: int):
     """
-    Simplified endpoint for quick predictions without SHAP values.
-    This fixes the 404 error when accessing /15619304 directly.
-    
-    Example: GET /15619304
+    Simple prediction endpoint without SHAP values.
+    Returns validated PredictionResponse.
     """
-    client_data = get_customer_data(customer_id)
-
-    if client_data is None:
-        return jsonify({"error": "Customer not found"}), 404
-
     try:
+        # Get customer data
+        client_data = get_customer_data(customer_id)
+        
+        if client_data is None:
+            error_response = create_error_response(
+                error="Customer not found",
+                details={"customer_id": customer_id}
+            )
+            return jsonify(error_response.model_dump()), 404
+        
         # Make prediction
-        prediction = model.predict(client_data)
-
-        response = {
-            "customer_id": customer_id,
-            "prediction": int(prediction[0]),
-            "message": "Use /score/<customer_id> for SHAP explanations"
-        }
-
-        logging.info(f"Prediction computed for customer ID: {customer_id}")
-        return jsonify(response)
-
+        prediction = model.predict(client_data)[0]
+        
+        # Get prediction probability for confidence
+        try:
+            prediction_proba = model.predict_proba(client_data)[0]
+            confidence = float(prediction_proba[prediction])
+        except:
+            confidence = None
+        
+        # Create validated response
+        response = create_prediction_response(
+            customer_id=customer_id,
+            prediction=int(prediction),
+            confidence=confidence,
+            message="Use /score/<customer_id> for SHAP explanations"
+        )
+        
+        logger.info(f"✓ Prediction for customer {customer_id}: {prediction}")
+        return jsonify(response.model_dump()), 200
+        
+    except ValidationError as e:
+        logger.error(f"Validation error: {e}")
+        error_response = create_error_response(
+            error="Validation failed",
+            details={"validation_errors": e.errors()}
+        )
+        return jsonify(error_response.model_dump()), 400
+        
     except Exception as e:
-        error_line = e.__traceback__.tb_lineno
-        error_type = type(e).__name__
-        error_message = str(e)
-        logging.error(f"Error during prediction for customer ID {customer_id}: "
-                      f"Line {error_line}, Type: {error_type}, Message: {error_message}")
-
-        return jsonify({
-            "error": f"An error occurred during prediction",
-            "details": {
-                "line": error_line,
-                "type": error_type,
-                "message": error_message
+        logger.error(f"Prediction error for customer {customer_id}: {e}")
+        error_response = create_error_response(
+            error="Prediction failed",
+            details={
+                "customer_id": customer_id,
+                "error_type": type(e).__name__,
+                "error_message": str(e)
             }
-        }), 500
+        )
+        return jsonify(error_response.model_dump()), 500
+
+
+@app.route('/score/<int:customer_id>', methods=['GET'])
+def score(customer_id: int):
+    """
+    Prediction endpoint with SHAP explanations.
+    Returns validated PredictionWithSHAPResponse.
+    """
+    try:
+        # Get customer data
+        client_data = get_customer_data(customer_id)
+        
+        if client_data is None:
+            error_response = create_error_response(
+                error="Customer not found",
+                details={"customer_id": customer_id}
+            )
+            return jsonify(error_response.model_dump()), 404
+        
+        # Make prediction
+        prediction = model.predict(client_data)[0]
+        
+        # Get prediction probability for confidence
+        try:
+            prediction_proba = model.predict_proba(client_data)[0]
+            confidence = float(prediction_proba[prediction])
+        except:
+            confidence = None
+        
+        # Calculate SHAP values
+        shap_values_dict = {}
+        if explainer:
+            try:
+                shap_values = explainer(client_data)
+                feature_names = client_data.columns.tolist()
+                shap_values_list = shap_values.values[0].tolist()
+                shap_values_dict = dict(zip(feature_names, shap_values_list))
+                logger.info(f"✓ SHAP values computed for customer {customer_id}")
+            except Exception as e:
+                logger.warning(f"Could not compute SHAP values: {e}")
+        else:
+            logger.warning("SHAP explainer not available")
+        
+        # Create validated response with SHAP
+        response = create_shap_response(
+            customer_id=customer_id,
+            prediction=int(prediction),
+            shap_values=shap_values_dict,
+            confidence=confidence,
+            top_n=5
+        )
+        
+        logger.info(f"✓ Prediction with SHAP for customer {customer_id}: {prediction}")
+        return jsonify(response.model_dump()), 200
+        
+    except ValidationError as e:
+        logger.error(f"Validation error: {e}")
+        error_response = create_error_response(
+            error="Validation failed",
+            details={"validation_errors": e.errors()}
+        )
+        return jsonify(error_response.model_dump()), 400
+        
+    except Exception as e:
+        logger.error(f"Scoring error for customer {customer_id}: {e}")
+        error_response = create_error_response(
+            error="Scoring failed",
+            details={
+                "customer_id": customer_id,
+                "error_type": type(e).__name__,
+                "error_message": str(e)
+            }
+        )
+        return jsonify(error_response.model_dump()), 500
+
+
+@app.errorhandler(404)
+def not_found(error):
+    """Handle 404 errors with validated response"""
+    error_response = create_error_response(
+        error="Endpoint not found",
+        details={"path": request.path}
+    )
+    return jsonify(error_response.model_dump()), 404
+
+
+@app.errorhandler(500)
+def internal_error(error):
+    """Handle 500 errors with validated response"""
+    error_response = create_error_response(
+        error="Internal server error",
+        details={"message": str(error)}
+    )
+    return jsonify(error_response.model_dump()), 500
 
 
 if __name__ == '__main__':
-    # Validate environment variables and file paths
-    logging.info("="*60)
-    logging.info("Starting Customer Churn Prediction API")
-    logging.info("="*60)
-    logging.info(f"MODEL_PATH: {MODEL_PATH}")
-    logging.info(f"TEST_DATA_PATH: {TEST_DATA_PATH}")
-    logging.info(f"INFERENCE_CLEANED_PATH: {INFERENCE_CLEANED_PATH}")
-    
-    # Check if files exist
-    if not os.path.exists(MODEL_PATH):
-        logging.error(f"Model file not found: {MODEL_PATH}")
-    else:
-        logging.info("✓ Model file found")
-    
-    if not os.path.exists(TEST_DATA_PATH):
-        logging.error(f"Test data file not found: {TEST_DATA_PATH}")
-    else:
-        logging.info("✓ Test data file found")
-    
-    logging.info("="*60)
-    
-    # Use a safer port (5000 is standard for Flask)
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    try:
+        # Initialize application
+        initialize_app()
+        
+        # Run Flask app with settings
+        logger.info(f"Starting API on {settings.api_host}:{settings.api_port}")
+        app.run(
+            host=settings.api_host,
+            port=settings.api_port,
+            debug=settings.api_debug
+        )
+        
+    except Exception as e:
+        logger.error(f"Failed to start API: {e}")
+        raise
