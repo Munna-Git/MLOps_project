@@ -6,6 +6,8 @@ import logging
 import numpy as np
 from xgboost import XGBClassifier
 from src.models.evaluate_model import get_model_metrics
+import mlflow
+import mlflow.xgboost
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
@@ -31,6 +33,13 @@ XGB_PARAMS: dict = {
 def train_xgb_model(X_train: np.ndarray, y_train: np.ndarray) -> XGBClassifier:
     """Train the XGBoost model with the provided parameters."""
     logging.info("Training XGBoost model.")
+
+    # Log hyperparameters to MLflow
+    mlflow.log_params(XGB_PARAMS)
+    mlflow.log_param("objective", "binary:logistic")
+    mlflow.log_param("eval_metric", "logloss")
+
+
     model = XGBClassifier(
         **XGB_PARAMS,
         objective="binary:logistic",
@@ -46,8 +55,33 @@ def evaluate_model(model: XGBClassifier, X_test: np.ndarray, y_test: np.ndarray)
     logging.info("Evaluating model.")
     y_pred = model.predict(X_test)
     metrics = get_model_metrics(y_test, y_pred)
+    
+    # Log metrics to MLflow
+    mlflow.log_metric("f1_score", metrics['f1_score'])
+    mlflow.log_metric("f2_score", metrics['f2_score'])
+    mlflow.log_metric("precision", metrics['precision'])
+    mlflow.log_metric("recall", metrics['recall'])
+    
+    # Log classification report metrics (class-specific)
+    if 'classification_report' in metrics:
+        report = metrics['classification_report']
+        # Log metrics for class 0 (no churn)
+        if '0' in report:
+            mlflow.log_metric("class_0_precision", report['0']['precision'])
+            mlflow.log_metric("class_0_recall", report['0']['recall'])
+            mlflow.log_metric("class_0_f1", report['0']['f1-score'])
+        # Log metrics for class 1 (churn)
+        if '1' in report:
+            mlflow.log_metric("class_1_precision", report['1']['precision'])
+            mlflow.log_metric("class_1_recall", report['1']['recall'])
+            mlflow.log_metric("class_1_f1", report['1']['f1-score'])
+        # Log overall accuracy
+        if 'accuracy' in report:
+            mlflow.log_metric("accuracy", report['accuracy'])
+    
     logging.info(f"Model evaluation metrics: {metrics}")
     return y_pred, metrics
+
 
 
 def save_model(model: XGBClassifier, filename: str) -> None:
@@ -57,6 +91,18 @@ def save_model(model: XGBClassifier, filename: str) -> None:
     logging.info(f"Saving model to {model_path}.")
     with open(model_path, "wb") as f:
         pickle.dump(model, f)
+
+    # Log model to MLflow
+    mlflow.xgboost.log_model(
+        model, 
+        "model",
+        registered_model_name="customer-churn-xgboost"  # Optional: auto-register
+    )
+    
+    mlflow.log_artifact(model_path, artifact_path="local_model")
+    
+    logging.info("Model saved locally and logged to MLflow.")
+
 
 
 def main():
@@ -79,16 +125,24 @@ def main():
 
     logging.info(f"Training data shape: {X_train.shape}, Test data shape: {X_test.shape}")
 
-    # Train model
-    model = train_xgb_model(X_train, y_train)
+    # Start MLflow run
+    with mlflow.start_run():
+        # Log dataset info
+        mlflow.log_param("train_samples", X_train.shape[0])
+        mlflow.log_param("test_samples", X_test.shape[0])
+        mlflow.log_param("n_features", X_train.shape[1])
+        
+        # Train model
+        model = train_xgb_model(X_train, y_train)
 
-    # Evaluate model
-    y_pred, metrics = evaluate_model(model, X_test, y_test)
+        # Evaluate model
+        y_pred, metrics = evaluate_model(model, X_test, y_test)
 
-    # Save trained model
-    save_model(model, MODEL_FILENAME)
+        # Save trained model
+        save_model(model, MODEL_FILENAME)
 
-    logging.info("Training pipeline completed successfully.")
+        logging.info("Training pipeline completed successfully.")
+        logging.info(f"MLflow Run ID: {mlflow.active_run().info.run_id}")
 
 
 if __name__ == "__main__":

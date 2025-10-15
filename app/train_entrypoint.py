@@ -1,311 +1,177 @@
-# app/train_entrypoint.py - REFACTORED WITH PYDANTIC
+# app/train_entrypoint.py
 
+# Feature and Training Pipeline
+from dotenv import load_dotenv
 import os
 import logging
 import sys
-from pathlib import Path
-from datetime import datetime
-import time
-
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from src.config.settings import get_settings
-from src.schemas.model_schemas import (
-    ModelTrainingConfig,
-    ModelMetadata,
-    ModelMetrics,
-    XGBoostHyperparameters
-)
-from src.schemas.data_schemas import DataFrameValidator, CustomerChurnRawData
 from src.data.clean_data import TrainingPipeline
 from src.data.train_test_split import split_data, save_data
 from src.models.train_model import train_xgb_model, evaluate_model, save_model
-from pydantic import ValidationError
-
-# Get validated settings
-settings = get_settings()
-
-# Configure logging with settings
-logging.basicConfig(
-    level=getattr(logging, settings.log_level),
-    format='%(asctime)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__name__)
+import mlflow
+import mlflow.xgboost
 
 
-def validate_raw_data() -> bool:
-    """Validate raw data against schema before processing"""
-    logger.info("Validating raw data schema...")
-    try:
-        import pandas as pd
-        df = pd.read_csv(settings.raw_data_filepath)
-        
-        # Validate first 100 rows as sample
-        is_valid, errors = DataFrameValidator.validate_dataframe(
-            df, 
-            CustomerChurnRawData,
-            sample_size=100
-        )
-        
-        if not is_valid:
-            logger.error("Raw data validation failed:")
-            for error in errors[:10]:  # Show first 10 errors
-                logger.error(f"  - {error}")
-            return False
-        
-        logger.info(f"✓ Raw data validation passed ({len(df)} rows)")
-        return True
-        
-    except Exception as e:
-        logger.error(f"Error during data validation: {e}")
-        return False
+# Load environment variables
+load_dotenv()
+
+# Constants
+RAW_DATA_FILEPATH = os.getenv("RAW_DATA_FILEPATH")
+CLEANED_DATA_FILEPATH = os.getenv("CLEANED_DATA_FILEPATH")
+PROCESSED_DATA_DIR = os.getenv("PROCESSED_DATA_DIR")
+MODEL_OUTPUT_DIR = os.getenv("MODEL_OUTPUT_DIR")
+MODEL_FILENAME = os.getenv("MODEL_FILENAME")
+TEST_SIZE = os.getenv("TEST_SIZE")
+
+# Ensure TEST_SIZE is valid float
+try:
+    TEST_SIZE = float(TEST_SIZE) if TEST_SIZE else 0.1
+except ValueError:
+    TEST_SIZE = 0.1
+
+# Configure logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 
-def run_data_cleaning_pipeline() -> bool:
-    """Execute data cleaning with error handling"""
-    logger.info("=" * 60)
-    logger.info("STEP 1: Data Cleaning Pipeline")
-    logger.info("=" * 60)
-    
-    try:
-        training_pipeline = TrainingPipeline(
-            str(settings.raw_data_filepath),
-            str(settings.cleaned_data_filepath)
-        )
-        training_pipeline.preprocess()
-        logger.info(f"✓ Data cleaned and saved to {settings.cleaned_data_filepath}")
-        return True
-        
-    except Exception as e:
-        logger.error(f"✗ Error during data cleaning: {e}")
-        return False
-
-
-def run_train_test_split() -> tuple:
-    """Execute train-test split with validated config"""
-    logger.info("=" * 60)
-    logger.info("STEP 2: Train-Test Split")
-    logger.info("=" * 60)
-    
-    try:
-        # Load cleaned data
-        training_pipeline = TrainingPipeline(
-            str(settings.raw_data_filepath),
-            str(settings.cleaned_data_filepath)
-        )
-        df = training_pipeline.load_cleaned_data()
-        logger.info(f"Loaded cleaned data: {df.shape}")
-        
-        # Create split configuration
-        from src.schemas.model_schemas import TrainTestSplitConfig
-        split_config = TrainTestSplitConfig(
-            test_size=settings.test_size,
-            random_state=settings.random_state,
-            stratify=True
-        )
-        
-        # Perform split
-        X_train, X_test, y_train, y_test = split_data(
-            df,
-            target="Exited",
-            test_size=split_config.test_size,
-            random_state=split_config.random_state
-        )
-        
-        # Save split data
-        save_data(X_train, y_train, "train", str(settings.processed_data_dir))
-        save_data(X_test, y_test, "test", str(settings.processed_data_dir))
-        
-        logger.info(f"✓ Train shape: {X_train.shape}, Test shape: {X_test.shape}")
-        logger.info(f"✓ Split data saved to {settings.processed_data_dir}")
-        
-        return X_train, X_test, y_train, y_test
-        
-    except Exception as e:
-        logger.error(f"✗ Error during train-test split: {e}")
-        raise
-
-
-def run_model_training(X_train, y_train) -> tuple:
-    """Train model with validated hyperparameters"""
-    logger.info("=" * 60)
-    logger.info("STEP 3: Model Training")
-    logger.info("=" * 60)
-    
-    try:
-        # Create and validate hyperparameters
-        hyperparameters = XGBoostHyperparameters(
-            n_estimators=150,
-            max_depth=3,
-            learning_rate=0.1,
-            min_child_weight=1.0,
-            subsample=1.0,
-            colsample_bytree=1.0,
-            scale_pos_weight=1.0,
-            random_state=settings.random_state
-        )
-        
-        logger.info("Training with hyperparameters:")
-        for param, value in hyperparameters.model_dump().items():
-            logger.info(f"  - {param}: {value}")
-        
-        # Train model with timing
-        start_time = time.time()
-        model = train_xgb_model(X_train, y_train)
-        training_duration = time.time() - start_time
-        
-        logger.info(f"✓ Model training completed in {training_duration:.2f}s")
-        
-        return model, hyperparameters, training_duration
-        
-    except ValidationError as e:
-        logger.error(f"✗ Hyperparameter validation failed: {e}")
-        raise
-    except Exception as e:
-        logger.error(f"✗ Error during model training: {e}")
-        raise
-
-
-def run_model_evaluation(model, X_test, y_test) -> ModelMetrics:
-    """Evaluate model and return validated metrics"""
-    logger.info("=" * 60)
-    logger.info("STEP 4: Model Evaluation")
-    logger.info("=" * 60)
-    
-    try:
-        y_pred, metrics_dict = evaluate_model(model, X_test, y_test)
-        
-        # Create validated metrics object
-        metrics = ModelMetrics(
-            f1_score=metrics_dict['f1_score'],
-            f2_score=metrics_dict['f2_score'],
-            precision=metrics_dict['precision'],
-            recall=metrics_dict['recall'],
-            confusion_matrix=metrics_dict['confusion_matrix'].tolist(),
-            classification_report=metrics_dict['classification_report']
-        )
-        
-        logger.info("Model Performance:")
-        logger.info(f"  - F1 Score: {metrics.f1_score:.4f}")
-        logger.info(f"  - F2 Score: {metrics.f2_score:.4f}")
-        logger.info(f"  - Precision: {metrics.precision:.4f}")
-        logger.info(f"  - Recall: {metrics.recall:.4f}")
-        
-        return metrics
-        
-    except ValidationError as e:
-        logger.error(f"✗ Metrics validation failed: {e}")
-        raise
-    except Exception as e:
-        logger.error(f"✗ Error during model evaluation: {e}")
-        raise
-
-
-def save_model_with_metadata(model, X_train, X_test, metrics, 
-                             hyperparameters, training_duration):
-    """Save model along with metadata"""
-    logger.info("=" * 60)
-    logger.info("STEP 5: Saving Model and Metadata")
-    logger.info("=" * 60)
-    
-    try:
-        # Create metadata
-        metadata = ModelMetadata(
-            model_name="XGBoost Churn Classifier",
-            model_version="1.0.0",
-            trained_at=datetime.now(),
-            training_samples=len(X_train),
-            test_samples=len(X_test),
-            feature_names=X_train.columns.tolist(),
-            metrics=metrics,
-            hyperparameters=hyperparameters,
-            training_duration_seconds=training_duration
-        )
-        
-        # Save model
-        save_model(model, settings.model_filename)
-        logger.info(f"✓ Model saved to {settings.full_model_path}")
-        
-        # Save metadata
-        metadata_path = settings.model_output_dir / "model_metadata.json"
-        with open(metadata_path, 'w') as f:
-            f.write(metadata.model_dump_json(indent=2))
-        logger.info(f"✓ Metadata saved to {metadata_path}")
-        
-        # Print summary
-        logger.info("\n" + "=" * 60)
-        logger.info("MODEL TRAINING SUMMARY")
-        logger.info("=" * 60)
-        logger.info(metadata.summary())
-        
-        return metadata
-        
-    except Exception as e:
-        logger.error(f"✗ Error saving model: {e}")
-        raise
+def ensure_directory_exists(directory: str) -> None:
+    """Create directory if it does not exist"""
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+        logging.info(f"Created directory: {directory}")
 
 
 def main() -> None:
-    """Execute the complete training pipeline with Pydantic validation"""
+    """Executes the feature preprocessing and model training pipeline."""
+
+   # Configure MLflow
+    mlflow.set_experiment("customer-churn-prediction")
     
-    logger.info("=" * 60)
-    logger.info("CUSTOMER CHURN PREDICTION - TRAINING PIPELINE")
-    logger.info("=" * 60)
-    logger.info(f"Started at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-    logger.info("")
+    # Start MLflow run with a descriptive name
+    run_name = f"xgboost-{datetime.now().strftime('%Y%m%d-%H%M%S')}"
     
-    try:
-        # Validate settings
-        logger.info("Configuration:")
-        logger.info(f"  - Raw Data: {settings.raw_data_filepath}")
-        logger.info(f"  - Cleaned Data: {settings.cleaned_data_filepath}")
-        logger.info(f"  - Processed Data Dir: {settings.processed_data_dir}")
-        logger.info(f"  - Model Output: {settings.full_model_path}")
-        logger.info(f"  - Test Size: {settings.test_size}")
-        logger.info(f"  - Random State: {settings.random_state}")
-        logger.info("")
+    with mlflow.start_run(run_name=run_name) as run:
+        logging.info("="*60)
+        logging.info(f"MLflow Run ID: {run.info.run_id}")
+        logging.info(f"MLflow Run Name: {run_name}")
+        logging.info("="*60)
         
-        # Step 0: Validate raw data
-        if not validate_raw_data():
-            logger.error("Pipeline aborted due to data validation errors")
+        # Validate environment variables
+        if None in [RAW_DATA_FILEPATH, CLEANED_DATA_FILEPATH, PROCESSED_DATA_DIR, MODEL_OUTPUT_DIR, MODEL_FILENAME]:
+            logging.error("Missing one or more required environment variables. Please check your .env file.")
+            mlflow.set_tag("status", "failed")
+            mlflow.set_tag("failure_reason", "missing_env_variables")
             return
-        
-        # Step 1: Clean data
-        if not run_data_cleaning_pipeline():
-            logger.error("Pipeline aborted due to cleaning errors")
+
+        # Log configuration parameters
+        mlflow.log_param("raw_data_filepath", RAW_DATA_FILEPATH)
+        mlflow.log_param("test_size", TEST_SIZE)
+        mlflow.log_param("model_filename", MODEL_FILENAME)
+        mlflow.set_tag("pipeline_version", "1.0")
+        mlflow.set_tag("model_type", "XGBoost")
+
+        # Ensure output directories exist
+        ensure_directory_exists(PROCESSED_DATA_DIR)
+        ensure_directory_exists(MODEL_OUTPUT_DIR)
+
+        # Step 1: Clean the raw data using the TrainingPipeline
+        logging.info("Step 1: Running data cleaning pipeline.")
+        try:
+            training_pipeline = TrainingPipeline(RAW_DATA_FILEPATH, CLEANED_DATA_FILEPATH)
+            training_pipeline.preprocess()
+            mlflow.set_tag("data_cleaning", "success")
+        except Exception as e:
+            logging.error(f"Error during data cleaning: {e}")
+            mlflow.set_tag("status", "failed")
+            mlflow.set_tag("failure_reason", "data_cleaning_error")
+            mlflow.log_param("error_message", str(e))
             return
-        
-        # Step 2: Split data
-        X_train, X_test, y_train, y_test = run_train_test_split()
-        
-        # Step 3: Train model
-        model, hyperparameters, training_duration = run_model_training(X_train, y_train)
-        
-        # Step 4: Evaluate model
-        metrics = run_model_evaluation(model, X_test, y_test)
-        
-        # Step 5: Save model and metadata
-        save_model_with_metadata(
-            model, X_train, X_test, metrics,
-            hyperparameters, training_duration
-        )
-        
-        logger.info("=" * 60)
-        logger.info("✓ PIPELINE COMPLETED SUCCESSFULLY")
-        logger.info("=" * 60)
-        
-    except ValidationError as e:
-        logger.error("=" * 60)
-        logger.error("VALIDATION ERROR")
-        logger.error("=" * 60)
-        logger.error(str(e))
-        raise
-    except Exception as e:
-        logger.error("=" * 60)
-        logger.error("PIPELINE FAILED")
-        logger.error("=" * 60)
-        logger.error(f"Error: {str(e)}")
-        raise
+
+        # Step 2: Load cleaned data and split into train-test sets
+        logging.info("Step 2: Loading cleaned data and performing train-test split.")
+        try:
+            df = training_pipeline.load_cleaned_data()
+            
+            # Log data statistics
+            mlflow.log_param("total_samples", len(df))
+            mlflow.log_param("n_features", len(df.columns) - 1)  # Exclude target
+            mlflow.log_param("target_column", "Exited")
+            
+            # Log target distribution
+            target_dist = df['Exited'].value_counts()
+            mlflow.log_param("class_0_count", int(target_dist.get(0, 0)))
+            mlflow.log_param("class_1_count", int(target_dist.get(1, 0)))
+            mlflow.log_param("class_balance_ratio", 
+                           round(target_dist.get(1, 0) / target_dist.get(0, 1), 3))
+            
+            X_train, X_test, y_train, y_test = split_data(df, target="Exited", test_size=TEST_SIZE)
+            save_data(X_train, y_train, "train", PROCESSED_DATA_DIR)
+            save_data(X_test, y_test, "test", PROCESSED_DATA_DIR)
+            
+            logging.info(f"Train-test split completed. Train shape: {X_train.shape}, Test shape: {X_test.shape}")
+            mlflow.set_tag("train_test_split", "success")
+            
+        except Exception as e:
+            logging.error(f"Error during train-test split: {e}")
+            mlflow.set_tag("status", "failed")
+            mlflow.set_tag("failure_reason", "train_test_split_error")
+            mlflow.log_param("error_message", str(e))
+            return
+
+        # Step 3: Train the XGBoost model
+        logging.info("Step 3: Starting XGBoost model training.")
+        try:
+            model = train_xgb_model(X_train, y_train)
+            logging.info("Model training completed successfully.")
+            mlflow.set_tag("model_training", "success")
+        except Exception as e:
+            logging.error(f"Error during model training: {e}")
+            mlflow.set_tag("status", "failed")
+            mlflow.set_tag("failure_reason", "model_training_error")
+            mlflow.log_param("error_message", str(e))
+            return
+
+        # Step 4: Evaluate the trained model
+        logging.info("Step 4: Evaluating the trained model.")
+        try:
+            y_pred, metrics = evaluate_model(model, X_test, y_test)
+            logging.info("Model evaluation completed successfully.")
+            mlflow.set_tag("model_evaluation", "success")
+            
+            # Log confusion matrix as text artifact
+            conf_matrix_str = f"Confusion Matrix:\n{metrics['confusion_matrix']}"
+            with open("confusion_matrix.txt", "w") as f:
+                f.write(conf_matrix_str)
+            mlflow.log_artifact("confusion_matrix.txt")
+            os.remove("confusion_matrix.txt")  # Clean up
+            
+        except Exception as e:
+            logging.error(f"Error during model evaluation: {e}")
+            mlflow.set_tag("status", "failed")
+            mlflow.set_tag("failure_reason", "model_evaluation_error")
+            mlflow.log_param("error_message", str(e))
+            return
+
+        # Step 5: Save the trained model
+        logging.info("Step 5: Saving the trained model.")
+        try:
+            save_model(model, MODEL_FILENAME)
+            logging.info(f"Model saved successfully to {os.path.join(MODEL_OUTPUT_DIR, MODEL_FILENAME)}.")
+            mlflow.set_tag("model_saving", "success")
+            mlflow.set_tag("status", "success")
+        except Exception as e:
+            logging.error(f"Error while saving the model: {e}")
+            mlflow.set_tag("status", "failed")
+            mlflow.set_tag("failure_reason", "model_saving_error")
+            mlflow.log_param("error_message", str(e))
+            return
+
+        logging.info("="*60)
+        logging.info("Feature preprocessing and model training pipeline completed successfully.")
+        logging.info(f"MLflow UI: Run 'mlflow ui' and navigate to http://localhost:5000")
+        logging.info(f"Run ID: {run.info.run_id}")
+        logging.info("="*60)
 
 
 if __name__ == "__main__":
