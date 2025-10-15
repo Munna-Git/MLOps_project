@@ -2,7 +2,6 @@
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 from typing import Literal, Optional, Dict, Any
-from datetime import datetime
 
 
 class XGBoostHyperparameters(BaseModel):

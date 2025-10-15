@@ -113,14 +113,8 @@ class DataFrameValidator:
         # Validate column names
         expected_fields = set(schema.model_fields.keys())
         actual_columns = set(df.columns)
-        
-        # Handle aliases
-        field_aliases = {
-            field_info.alias or field_name: field_name 
-            for field_name, field_info in schema.model_fields.items() 
-            if field_info.alias
-        }
-        
+
+
         # Check for missing columns
         missing_cols = expected_fields - actual_columns
         if missing_cols:
