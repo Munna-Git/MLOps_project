@@ -46,14 +46,6 @@ ENV/
 # MLflow (tracking data - too large for Git)
 mlruns/
 
-# CRITICAL: DO NOT IGNORE THESE FOR DEPLOYMENT
-# Data files (KEEP FOR RENDER)
-# data/raw/*.csv  ← COMMENTED OUT - WE NEED THESE!
-# data/cleaned/*.csv  ← COMMENTED OUT - WE NEED THESE!
-
-# Model files (KEEP FOR RENDER)
-# models/*.pkl  ← COMMENTED OUT - WE NEED THESE!
-
 # But ignore processed data (can be regenerated)
 data/processed/
 
