@@ -11,3 +11,43 @@ services:
         value: /opt/render/project/src/data/raw/InferenceData.csv
       - key: INFERENCE_CLEANED_PATH
         value: /opt/render/project/src/data/cleaned/InferenceCleaned.csv
+
+# render.yaml - FIXED FOR DEPLOYMENT
+
+services:
+  - type: web
+    name: customer-churn-api
+    env: python
+    region: oregon  # Choose closest region to you
+    plan: free
+    
+    # Build command - install dependencies
+    buildCommand: |
+      pip install --upgrade pip
+      pip install -r requirements.txt
+    
+    # Start command - run Flask app
+    startCommand: gunicorn --bind 0.0.0.0:$PORT app.inference_entrypoint:app
+    
+    # Health check
+    healthCheckPath: /
+    
+    # Environment variables (update these paths to match Render's structure)
+    envVars:
+      - key: MODEL_PATH
+        value: ./models/xgboost_model.pkl
+      
+      - key: TEST_DATA_PATH
+        value: ./data/raw/InferenceData.csv
+      
+      - key: INFERENCE_CLEANED_PATH
+        value: ./data/cleaned/InferenceCleaned.csv
+      
+      - key: USE_MLFLOW_MODEL
+        value: false
+      
+      - key: FLASK_ENV
+        value: production
+      
+      - key: PYTHONUNBUFFERED
+        value: "1"

@@ -1,20 +1,69 @@
+# .gitignore - FIXED FOR DEPLOYMENT
+
 # Python
 __pycache__/
-*.pyc
-*.pyo
-*.pyd
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
 
-# Virtual envs
+# Virtual Environment
 venv/
-.venv/
+env/
+ENV/
+.venv
 
-# Artifacts
-artifacts/
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Jupyter Notebooks
+.ipynb_checkpoints
+*.ipynb
+
+# Environment variables (local only)
+.env
+
+# MLflow (tracking data - too large for Git)
 mlruns/
 
-# Configs & secrets
-*.env
+# CRITICAL: DO NOT IGNORE THESE FOR DEPLOYMENT
+# Data files (KEEP FOR RENDER)
+# data/raw/*.csv  ← COMMENTED OUT - WE NEED THESE!
+# data/cleaned/*.csv  ← COMMENTED OUT - WE NEED THESE!
 
-# OS-specific
-.DS_Store
+# Model files (KEEP FOR RENDER)
+# models/*.pkl  ← COMMENTED OUT - WE NEED THESE!
+
+# But ignore processed data (can be regenerated)
+data/processed/
+
+# Logs
+*.log
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# OS
 Thumbs.db
