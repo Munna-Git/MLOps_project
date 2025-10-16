@@ -1,4 +1,4 @@
-# app/inference_entrypoint.py
+# app/inference_entrypoint.py - WITH MLFLOW MODEL LOADING
 
 from flask import Flask, jsonify, request
 from dotenv import load_dotenv
@@ -8,6 +8,8 @@ import pandas as pd
 import shap
 import logging
 import sys
+import mlflow
+import mlflow.xgboost
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
@@ -27,6 +29,11 @@ MODEL_PATH = os.getenv("MODEL_PATH")
 TEST_DATA_PATH = os.getenv("TEST_DATA_PATH")
 INFERENCE_CLEANED_PATH = os.getenv("INFERENCE_CLEANED_PATH")
 
+# 🔥 NEW: Option to load model from MLflow (set in .env)
+USE_MLFLOW_MODEL = os.getenv("USE_MLFLOW_MODEL", "false").lower() == "true"
+MLFLOW_MODEL_NAME = os.getenv("MLFLOW_MODEL_NAME", "customer-churn-xgboost")
+MLFLOW_MODEL_STAGE = os.getenv("MLFLOW_MODEL_STAGE", "Production")  # Production, Staging, or None
+
 # Check environment variables
 if None in [MODEL_PATH, TEST_DATA_PATH, INFERENCE_CLEANED_PATH]:
     logging.error("Missing one or more required environment variables. Please check your .env file.")
@@ -34,9 +41,18 @@ if None in [MODEL_PATH, TEST_DATA_PATH, INFERENCE_CLEANED_PATH]:
 
 # Load model
 try:
-    with open(MODEL_PATH, 'rb') as model_file:
-        model = pickle.load(model_file)
-        logging.info("Model loaded successfully.")
+    if USE_MLFLOW_MODEL:
+        # 🔥 NEW: Load model from MLflow Model Registry
+        logging.info(f"Loading model from MLflow Registry: {MLFLOW_MODEL_NAME}/{MLFLOW_MODEL_STAGE}")
+        model_uri = f"models:/{MLFLOW_MODEL_NAME}/{MLFLOW_MODEL_STAGE}"
+        model = mlflow.xgboost.load_model(model_uri)
+        logging.info(f"✓ Model loaded from MLflow Registry: {model_uri}")
+    else:
+        # Original: Load model from pickle file
+        logging.info(f"Loading model from local file: {MODEL_PATH}")
+        with open(MODEL_PATH, 'rb') as model_file:
+            model = pickle.load(model_file)
+        logging.info("✓ Model loaded from local file")
 except Exception as e:
     logging.error(f"Error loading model: {e}")
     raise
@@ -44,6 +60,7 @@ except Exception as e:
 # Initialize SHAP explainer AFTER model loads
 try:
     explainer = shap.Explainer(model)
+    logging.info("✓ SHAP explainer initialized")
 except Exception as e:
     logging.error(f"Error initializing SHAP explainer: {e}")
     explainer = None
@@ -88,9 +105,15 @@ def get_customer_data(customer_id: int) -> pd.DataFrame | None:
 @app.route('/', methods=['GET'])
 def home():
     """Health check endpoint."""
+    model_source = "MLflow Registry" if USE_MLFLOW_MODEL else "Local Pickle File"
+    model_info = f"{MLFLOW_MODEL_NAME}/{MLFLOW_MODEL_STAGE}" if USE_MLFLOW_MODEL else MODEL_PATH
+    
     return jsonify({
         'status': 'running',
         'message': 'Customer Churn Prediction API',
+        'model_source': model_source,
+        'model_info': model_info,
+        'mlflow_enabled': USE_MLFLOW_MODEL,
         'endpoints': {
             'predict_with_shap': '/score/<customer_id> [GET]',
             'predict_simple': '/<customer_id> [GET]',
@@ -123,8 +146,10 @@ def score(customer_id):
 
         response = {
             "customer_id": customer_id,
-            "prediction": int(prediction[0]),  # Assuming binary classification
-            "shap_values": dict(zip(feature_names, shap_values_list[0])) if shap_values else {}
+            "prediction": int(prediction[0]),
+            "prediction_label": "Will Churn" if prediction[0] == 1 else "Will Not Churn",
+            "shap_values": dict(zip(feature_names, shap_values_list[0])) if shap_values else {},
+            "model_source": "MLflow Registry" if USE_MLFLOW_MODEL else "Local File"
         }
 
         logging.info(f"Prediction and SHAP values computed for customer ID: {customer_id}")
@@ -151,9 +176,6 @@ def score(customer_id):
 def predict_simple(customer_id):
     """
     Simplified endpoint for quick predictions without SHAP values.
-    This fixes the 404 error when accessing /15619304 directly.
-    
-    Example: GET /15619304
     """
     client_data = get_customer_data(customer_id)
 
@@ -167,7 +189,9 @@ def predict_simple(customer_id):
         response = {
             "customer_id": customer_id,
             "prediction": int(prediction[0]),
-            "message": "Use /score/<customer_id> for SHAP explanations"
+            "prediction_label": "Will Churn" if prediction[0] == 1 else "Will Not Churn",
+            "message": "Use /score/<customer_id> for SHAP explanations",
+            "model_source": "MLflow Registry" if USE_MLFLOW_MODEL else "Local File"
         }
 
         logging.info(f"Prediction computed for customer ID: {customer_id}")
@@ -195,21 +219,25 @@ if __name__ == '__main__':
     logging.info("="*60)
     logging.info("Starting Customer Churn Prediction API")
     logging.info("="*60)
-    logging.info(f"MODEL_PATH: {MODEL_PATH}")
-    logging.info(f"TEST_DATA_PATH: {TEST_DATA_PATH}")
-    logging.info(f"INFERENCE_CLEANED_PATH: {INFERENCE_CLEANED_PATH}")
     
-    # Check if files exist
-    if not os.path.exists(MODEL_PATH):
-        logging.error(f"Model file not found: {MODEL_PATH}")
+    if USE_MLFLOW_MODEL:
+        logging.info(f"✓ Using MLflow Model Registry")
+        logging.info(f"  Model: {MLFLOW_MODEL_NAME}")
+        logging.info(f"  Stage: {MLFLOW_MODEL_STAGE}")
     else:
-        logging.info("✓ Model file found")
+        logging.info(f"MODEL_PATH: {MODEL_PATH}")
+        if not os.path.exists(MODEL_PATH):
+            logging.error(f"Model file not found: {MODEL_PATH}")
+        else:
+            logging.info("✓ Model file found")
     
+    logging.info(f"TEST_DATA_PATH: {TEST_DATA_PATH}")
     if not os.path.exists(TEST_DATA_PATH):
         logging.error(f"Test data file not found: {TEST_DATA_PATH}")
     else:
         logging.info("✓ Test data file found")
     
+    logging.info(f"INFERENCE_CLEANED_PATH: {INFERENCE_CLEANED_PATH}")
     logging.info("="*60)
     
     # Use a safer port (5000 is standard for Flask)
