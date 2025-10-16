@@ -302,6 +302,43 @@ if not app_initialized:
     logger.warning("⚠ API started but model not loaded. Check logs for details.")
 
 
+@app.route('/debug/files', methods=['GET'])
+def debug_files():
+    """Diagnostic endpoint to see what files are available"""
+    import os
+    
+    file_structure = {}
+    
+    # Check specific paths
+    paths_to_check = [
+        BASE_DIR,
+        os.path.join(BASE_DIR, 'models'),
+        os.path.join(BASE_DIR, 'data'),
+        os.path.join(BASE_DIR, 'data', 'raw'),
+        MODEL_PATH,
+        TEST_DATA_PATH
+    ]
+    
+    for path in paths_to_check:
+        if os.path.exists(path):
+            if os.path.isfile(path):
+                size = os.path.getsize(path)
+                file_structure[path] = f"FILE ({size} bytes)"
+            else:
+                files = os.listdir(path)
+                file_structure[path] = f"DIR with {len(files)} items: {files[:10]}"
+        else:
+            file_structure[path] = "NOT FOUND"
+    
+    return jsonify({
+        "base_dir": BASE_DIR,
+        "model_path": MODEL_PATH,
+        "test_data_path": TEST_DATA_PATH,
+        "file_structure": file_structure,
+        "current_working_dir": os.getcwd()
+    }), 200
+
+
 if __name__ == '__main__':
     # For local development only
     port = int(os.getenv('PORT', 5000))
