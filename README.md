@@ -1,34 +1,47 @@
-# MLOps Project: End-to-End Customer Churn Prediction Pipeline
+# **MLOps Project:** End-to-End Customer Churn Prediction Pipeline
 
 > **Elevator Pitch:**  
-> This repository delivers a modular, production-ready MLOps pipeline built with Python, Flask, Docker, and automated CI/CD and deployed using Render. It efficiently manages the full ML lifecycle from feature engineering and training to containerized deployment and robust validation, with integrated explainability and data quality checks for enterprise-scale reliability.
+> This repository delivers a **modular**, **production-ready MLOps pipeline** built with **Python**, **Flask**, **Docker**, **MLflow** (for experiment tracking), and **automated CI/CD**. The solution is **deployed using Render** and efficiently manages the full ML lifecycle-from data to deployment-providing traceable, scalable, and reproducible results.
 
 ---
 
-## 🎯 Quick Highlights for Recruiters
+## 🎯 **Quick Highlights for Recruiters**
 
-- Production-Ready MLOps System: Delivered a fully automated pipeline for data validation, model training, deployment, and monitoring — showcasing end-to-end ML engineering and DevOps integration.
+- **Production-Ready MLOps System:**  
+  Delivered a **fully automated pipeline** for **data validation**, **model training**, **deployment**, and **monitoring**-showcasing **end-to-end ML engineering and DevOps integration**.
 
-- Cloud-Native & Scalable Infrastructure: Built using containerized microservices (Docker) and CI/CD workflows (GitHub Actions), ensuring reproducibility, maintainability, and rapid adaptation to new datasets or use cases.
+- **Cloud-Native & Scalable Infrastructure:**  
+  Built using **containerized microservices (Docker)**, **MLflow** for experiment tracking, and **CI/CD workflows (GitHub Actions)**, ensuring **reproducibility**, **maintainability**, and **rapid adaptation**.
 
-- Automated Quality Assurance: Implemented Pydantic for type-safe validation and Great Expectations for data quality checks, cutting manual testing by 40% and preventing production-level data issues.
+- **Model Explainability & Trust:**  
+  Integrated **SHAP** for interpretable predictions, empowering stakeholders to understand and trust model outcomes.
 
-- Model Explainability & Trust: Integrated SHAP for interpretable predictions, empowering stakeholders to understand and trust model outcomes.
+- **Robust Architecture:**  
+  Designed **modular**, **well-logged**, **API-driven components** with **clear separation of concerns** for scalability and easy integration.
 
-- Robust Architecture: Designed modular, well-logged, API-driven components with clear separation of concerns for scalability and easy integration into enterprise systems.
+- **CI/CD & Monitoring Excellence:**  
+  Established **continuous integration**, **testing**, and **deployment pipelines** with real-time monitoring ensuring reliability and consistent model performance at scale.
 
-- CI/CD & Monitoring Excellence: Established continuous integration, testing, and deployment pipelines with real-time monitoring — ensuring reliability and consistent model performance at scale.
+- **Experiment Tracking:**  
+  **MLflow-based tracking** and comparison of all model runs, hyperparameters, and results.
+
+- **Modern Cloud Deployment:**  
+  Production API deployed using **Render**, supporting scalability and easy updates.
 
 ---
 
-## Quick tech summary for engineers
+## **Quick Tech Summary for Engineers**
 
-- Modular architecture leveraging Python, Flask APIs, and Dockerized deployment.
-- Automated CI/CD with GitHub Actions, unit tests, and data validation checks.
-- Full-featured pipeline: data cleaning → feature engineering → training → inference → explainability.
+- **Modular architecture** leveraging **Python**, **Flask APIs**, and **Dockerized deployment**
+- **Automated CI/CD** with **GitHub Actions**, **unit tests**, and **data validation checks**
+- **Full-featured pipeline:**  
+  **data cleaning** → **feature engineering** → **training** → **inference** → **explainability**
+- **Experiment management** with **MLflow** for reproducible experiments and model registry
+- **API and model deployment automated via Render**
 
 ---
-## Table of Contents
+
+## **Table of Contents**
 
 - [Project Overview](#project-overview)
 - [Why This Project Matters](#why-this-project-matters)
@@ -38,65 +51,76 @@
 - [How to Run](#how-to-run)
 - [CI/CD & Testing](#cicd--testing)
 - [Model Explainability & Validation](#model-explainability--validation)
-- [MLOps Project — Challenges & Solutions](#mlops-project-challenges--solutions)
-- [Future Enhancements](#future-enhancements)
+- [Experiment Tracking with MLflow](#experiment-tracking-with-mlflow)
+- [Deployment on Render](#deployment-on-render)
+- [MLOps Project - Challenges & Solutions](#mlops-project-challenges--solutions)
 - [Contact](#contact)
 
+---
 
+## **Project Overview**
 
-## Project Overview
-This project implements a customer churn prediction system designed with production-grade MLOps practices. The system predicts whether a customer will leave a service (churn) based on behavioral and demographic features. Unlike basic ML notebooks, this is a complete software system with:
+This project implements a **customer churn prediction system** designed with **production-grade MLOps practices**. The system predicts whether a customer will leave a service (churn) based on behavioral and demographic data.
 
 - Automated data validation and quality checks
 - Modular, testable pipeline architecture
 - REST API for real-time predictions
 - Docker containerization for deployment
+- MLflow experiment tracking and model registry
+- Production API deployed on Render
 - CI/CD automation with GitHub Actions
 - Model explainability via SHAP
 - Comprehensive logging and error handling
 
-The pipeline handles everything from raw data ingestion through cleaning, feature engineering, model training, evaluation, and inference with validation gates at every stage to ensure data quality and model reliability.
+---
 
-## Why This Project Matters
-**Business Value**
-Customer churn directly impacts revenue and growth. This system enables businesses to:
+## **Why This Project Matters**
 
-- Predict churn proactively: Identify at-risk customers before they leave
-- Optimize retention strategies: Target interventions based on SHAP-driven insights into churn drivers
-- Reduce operational risk: Automated validation catches data quality issues before they affect predictions
-- Scale efficiently: Containerized deployment enables easy scaling across environments
+**Business Value:**  
+Customer churn directly impacts **revenue and growth**. This system enables businesses to:
 
-## Tech Stack
-### Core ML & Data Processing
+- **Predict churn proactively:** Identify at-risk customers before they leave
+- **Optimize retention strategies:** Target interventions based on SHAP-driven insights into churn drivers
+- **Reduce operational risk:** Automated validation catches data issues before they affect predictions
+- **Scale efficiently:** Containerized deployment enables easy scaling across environments
 
-- Python 3.8+: Primary programming language
-- Pandas & NumPy: Data manipulation and numerical operations
-- scikit-learn: Train/test splitting, preprocessing utilities, evaluation metrics
-- XGBoost: Gradient boosting classifier for churn prediction
-- imbalanced-learn: Handling class imbalance in churn data
-- pytest: Unit and integration testing framework
+---
 
-### API & Deployment
+## **Tech Stack**
 
-- Flask: REST API server for inference endpoints with health checks
-- Docker: Containerization for reproducible deployments across environments
-- Waitress: Production WSGI server for Flask (optional for prod deployment)
+### **Core ML & Data Processing**
 
-### Model Explainability
+- **Python 3.10:** Primary programming language
+- **Pandas & NumPy:** Data manipulation and numerical operations
+- **scikit-learn:** Train/test splitting, preprocessing utilities, evaluation metrics
+- **XGBoost:** Gradient boosting classifier for churn prediction
+- **imbalanced-learn:** Handling class imbalance in churn data
+- **pytest:** Unit and integration testing framework
 
-SHAP: Generates feature importance and per-prediction explanations for model transparency
+### **API & Deployment**
 
-### CI/CD & Infrastructure
+- **Flask:** REST API server for inference endpoints with health checks
+- **Docker:** Containerization for reproducible deployments
+- **Waitress:** Production WSGI server for Flask
+- **Render:** Cloud deployment platform for API hosting
 
-- GitHub Actions: Automated testing, linting, and Docker image builds on every push
-isort, flake8: Code formatting and linting for consistent style
-- python-dotenv: Environment variable management for different deployment contexts
+### **Model Explainability**
 
-### Monitoring & Experiment Tracking
+- **SHAP:** Feature importance and per-prediction explanations for model transparency
 
-- MLflow: Model versioning and experiment tracking
+### **CI/CD & Infrastructure**
 
-## Project Architecture
+- **GitHub Actions:** Automated testing, linting, and Docker image builds
+- **isort, flake8:** Code formatting and linting
+- **python-dotenv:** Environment variable management
+
+### **Monitoring & Experiment Tracking**
+
+- **MLflow:** Experiment tracking, model registry, and reproducible runs
+
+---
+
+## **Project Architecture**
 
 ```
 mlops_project/
@@ -150,49 +174,47 @@ mlops_project/
 ├── .gitignore                           # Ignored files and directories
 └── venv/                                # Virtual environment (optional, not tracked)
 ```
+---
 
-## Feature & Training Pipeline
-End-to-End Pipeline Flow
-The training pipeline is orchestrated through app/train_entrypoint.py and executes the following stages:
+## **Feature & Training Pipeline**
 
-### 1. Data Loading
+**End-to-End Pipeline Flow**  
+The training pipeline is orchestrated through `app/train_entrypoint.py` and executes the following stages:
 
-- Raw CSV loaded from data/raw/Customer-Churn-Records.csv
+### **1. Data Loading**
 
-### 2. Data Cleaning & Preprocessing
+- Raw CSV loaded from `data/raw/Customer-Churn-Records.csv`
 
-- Drops unnecessary columns (RowNumber, Surname, Complain, CustomerId for training)
-- Renames columns for consistency (e.g., Satisfaction Score → SatisfactionScore)
+### **2. Data Cleaning & Preprocessing**
+
+- Drops unnecessary columns (*RowNumber, Surname, Complain, CustomerId for training*)
+- Renames columns for consistency (*e.g., Satisfaction Score → SatisfactionScore*)
 - One-hot encodes Geography and Gender
-- Ordinal encodes CardType (SILVER=0, GOLD=1, PLATINUM=2, DIAMOND=3)
-- Validates cleaned data with 18 expectations
-Files: src/data/clean_data.py
+- Ordinal encodes CardType (*SILVER=0, GOLD=1, PLATINUM=2, DIAMOND=3*)
 
-### 3. Train-Test Split
+### **3. Train-Test Split**
 
-- Stratified split to preserve churn ratio (default: 90/10)
+- Stratified split to preserve churn ratio (*default: 90/10*)
 - Saves both CSV and pickle formats
-- Validates processed features with 15 expectations
-- Files: src/data/train_test_split.py
 
-### 4. Model Training
+### **4. Model Training**
 
-- XGBoost classifier with configured hyperparameters
+- **XGBoost classifier** with configured hyperparameters
 - Training logged with comprehensive metrics
-- Files: src/models/train_model.py
 
-### 5. Model Evaluation
+### **5. Model Evaluation**
 
-- Computes F1, F2, Precision, Recall, Confusion Matrix
-- Generates ROC and Precision-Recall curves
-- Files: src/models/evaluate_model.py
+- Computes **F1, F2, Precision, Recall, Confusion Matrix**
+- Generates **ROC and Precision-Recall curves**
 
-### 6. Model Persistence
+### **6. Model Persistence**
 
-- Saves model as .pkl file
-- Files: models/xgboost_model.pkl
+- Saves model as `.pkl` file
 
-## How to Run
+---
+
+
+## **How to Run**
 
 1. **Clone the Repository**
     ```bash
@@ -212,6 +234,8 @@ Files: src/data/clean_data.py
     ```bash
     python app/train_entrypoint.py
     ```
+    - All runs and metrics will be tracked in **MLflow**.
+
 
 5. **Start the Inference API**
     ```bash
@@ -236,67 +260,110 @@ Files: src/data/clean_data.py
     ```
 *This mounts local data and model directories into the container for persistent access.*
 
+9. **API Deployment on Render**
+    - Connect this repo to your **Render** account.
+    - Create a new **Web Service**, set build and start commands:
+        - **Build Command:** `pip install -r requirements.txt`
+        - **Start Command:** `python app/inference_entrypoint.py`
+    - Add environment variables/secrets in Render dashboard.
+    - Redeploy on new commits automatically.
+
 ---
-updated
 
-## CI/CD & Testing
-### GitHub Actions Workflows
+## **CI/CD & Testing**
+
+### **GitHub Actions Workflows**
+
 The project uses two automated workflows:
-### Continuous Integration (ci.yml)
 
-Triggered on every push and pull request:
+#### **Continuous Integration (`ci.yml`)**
 
-yaml# .github/workflows/ci.yml
-- Linting with flake8 (ignores E203, W503)
-- Code formatting check with isort
-- Unit tests with pytest
-- Great Expectations validation tests
-- Feature pipeline integration tests
+- **Linting** with flake8
+- **Code formatting check** with isort
+- **Unit tests** with pytest
+- **Feature pipeline integration tests**
 
-### Continuous Deployment (cd.yml)
-Triggered on pushes to main branch:
-yaml# .github/workflows/cd.yml
-- Build Docker image
-- Tag with commit SHA and 'latest'
-- Push to DockerHub using GitHub Secrets
+#### **Continuous Deployment (`cd.yml`)**
 
-### GitHub Secrets Required:
+- **Triggered on pushes to main branch**
+- **Build Docker image**
+- **Tag with commit SHA and 'latest'**
+- **Push to DockerHub using GitHub Secrets**
 
-DOCKERHUB_USERNAME: DockerHub account username
-DOCKERHUB_TOKEN: DockerHub access token
+#### **GitHub Secrets Required:**
 
-## Model Explainability & Validation
-### SHAP (SHapley Additive exPlanations)
-SHAP provides transparent, interpretable predictions by computing feature contributions:
+- `DOCKERHUB_USERNAME`: DockerHub account username
+- `DOCKERHUB_TOKEN`: DockerHub access token
 
-Implementation:
+---
 
-- Initialized in app/inference_entrypoint.py
-- Calculates per-prediction feature importance
-- Returned in API response for /score/<customer_id> endpoint
+## **Model Explainability & Validation**
 
-Example SHAP Output:
+### **SHAP (SHapley Additive exPlanations)**
+
+**SHAP** provides transparent, interpretable predictions by computing feature contributions:
+
+- **Initialized** in `app/inference_entrypoint.py`
+- **Calculates per-prediction feature importance**
+- **Returned in API response** for `/score/<customer_id>` endpoint
+
+**Example SHAP Output:**
 ```
-json{
+{
   "shap_values": {
-    "Age": 0.12,           // Older age increases churn risk
-    "Balance": 0.34,       // Higher balance increases churn risk
-    "NumOfProducts": -0.05, // More products reduce churn risk
-    "IsActiveMember": -0.23 // Active members less likely to churn
+    "Age": 0.12,
+    "Balance": 0.34,
+    "NumOfProducts": -0.05,
+    "IsActiveMember": -0.23
   }
 }
 ```
-Use Cases:
 
-- Understanding why individual customers are predicted to churn
-- Identifying global feature importance patterns
-- Building trust with stakeholders through transparent predictions
+**Use Cases:**
 
-
-
-# 🧠 MLOps Project — Challenges & Solutions
+- **Understanding** why individual customers are predicted to churn
+- **Identifying** global feature importance patterns
+- **Building trust** with stakeholders through transparent predictions
 
 ---
+
+## **Experiment Tracking with MLflow**
+
+All model training runs, hyperparameters, metrics, and artifacts are **logged automatically to MLflow**.
+
+- **How:**  
+  MLflow is integrated into the training pipeline. All experiments are tracked under the local `mlruns/` directory or a remote server if configured.
+- **Benefits:**  
+  - **Compare model versions and parameters easily**
+  - **Visualize metrics and download artifacts**
+  - **Register and promote best models for deployment**
+
+**Quickstart:**
+```bash
+mlflow ui
+# then navigate to http://localhost:5000
+```
+
+---
+
+## **Deployment on Render**
+
+The production inference API is **deployed and served using [Render](https://render.com/):**
+
+- **Steps:**
+  1. Connect your GitHub repository in Render dashboard.
+  2. Choose **Web Service** and select your repo/branch.
+  3. Set environment variables and secrets.
+  4. Set the build and start commands as above.
+  5. On every new commit to `main`, Render redeploys the API automatically.
+
+- **Benefits:**
+  - **Managed, scalable API deployment** with HTTPS and zero-downtime deploys
+  - **No manual server/VM management required**
+
+---
+
+## MLOps Project - Challenges & Solutions
 
 ## 1. Git & Terminal Setup
 
@@ -316,7 +383,7 @@ Always verify `.gitignore` before the initial commit.
 ## 2. Model Pipeline Development
 
 **Problem:**  
-Transitioning from a simple XGBoost notebook to a modular pipeline was challenging — implementing abstract classes, data cleaning, train/test split logic, and proper separation of concerns.
+Transitioning from a simple XGBoost notebook to a modular pipeline was challenging - implementing abstract classes, data cleaning, train/test split logic, and proper separation of concerns.
 
 **Solution:**
 - Broke the problem into smaller, manageable components  
@@ -431,124 +498,90 @@ Setting up CD for automated Docker builds and secure credential management.
   * Tag with commit SHA and `latest`
   * Push to DockerHub automatically
 
+## **Deployment issues**
+**Problem:**
+While deploying the model on Render, the container couldn’t locate the model file and inference data. Initially, it appeared that the Docker image didn’t include these assets because I had mounted local directories for persistent access.
+
+**Solution:**
+After debugging and checking the Dockerfile, I discovered the issue was with .dockerignore-it excluded both the data/ folder and .pkl model files. I updated it to ignore all data by default but explicitly keep the inference file and model artifacts. Once fixed, the model deployed successfully and predictions for customer IDs worked as expected.
+
+
 **Result:**
-🚀 Fully automated deployment pipeline from code commit to DockerHub.
+Fully automated deployment pipeline from code commit to DockerHub.
 
 ---
 
 
+## **Recommended Future Enhancements**
 
+### **Monitoring & Alerting (Short-Term Priority)**
 
-## Future Enhancements
+**Why:** Critical for production ML - you can’t manage what you can’t measure.
+**What to implement:**
 
----
+* **Prometheus + Grafana** (or lightweight alternatives like `prometheus_client` + Render metrics)
+* Track model latency, prediction volume, and errors
+* Add **data drift** monitoring using **Evidently AI**
 
-### 🧩 Short-Term (Next 1–3 Months)
-
-#### **Monitoring & Alerting**
-
-* Integrate **Prometheus** for model performance tracking
-* Set up alerts for prediction latency and error rates
-* Track **data drift metrics** over time
-
-#### **Model Retraining Pipeline**
-
-* Automate retraining on new data batches
-* Implement **A/B testing framework** for model comparison
-* Enable **rolling deployment** strategy for smooth updates
-
-#### **Enhanced Logging**
-
-* Use **ELK Stack (Elasticsearch, Logstash, Kibana)** for structured logging
-* Implement request/response logs for audit trails
-* Add performance profiling to detect bottlenecks
-
-#### **Data Drift Detection**
-
-* Integrate **Evidently AI** or **Alibi Detect**
-* Trigger alerts and automated retraining when drift is detected
+→ *Gives visibility into model behavior & ensures reliability.*
 
 ---
 
-### ⚙️ Medium-Term (3–6 Months)
+### **Model Retraining Pipeline**
 
-#### **Kubernetes Deployment**
+**Why:** Customer churn data changes over time - retraining keeps your model relevant.
+**What to implement:**
 
-* Migrate from Docker to **Kubernetes**
-* Enable **Horizontal Pod Autoscaling** for inference workloads
-* Manage configuration using **Helm charts**
+* A retraining script triggered manually or on a schedule (e.g. GitHub Actions + cron)
+* Save model artifacts with versioning (`models/model_v2.pkl`)
+* Optional: A/B testing between new and old models before replacing
 
-#### **Feature Store**
-
-* Implement **Feast** or a custom feature store
-* Centralize feature management and versioning
-* Minimize feature duplication across models
-
-#### **Advanced CI/CD**
-
-* Multi-stage deployments (**dev → staging → prod**)
-* Canary deployments for gradual rollout
-* Automated rollback on performance degradation
-* Integration tests in staging environment
-
-#### **API Enhancements**
-
-* Add **batch prediction endpoint** for bulk scoring
-* Introduce **asynchronous prediction** queue using **Celery**
-* Implement rate limiting and **JWT authentication**
-* Generate **OpenAPI/Swagger** documentation
+→ *Adds automation and reduces manual overhead.*
 
 ---
 
-### 🚀 Long-Term (6–12 Months)
+### **Enhanced Logging**
 
-#### **Multi-Model System**
+**Why:** Essential for debugging and auditability.
+**What to implement:**
 
-* Develop **model ensembles** for improved accuracy
-* Segment-based model selection
-* Integrate **AutoML** for hyperparameter optimization
-* Use **shadow mode deployment** for safe A/B testing
+* Use **structured JSON logs**
+* Store logs in a simple cloud logging solution (e.g. ELK Stack or Render logs + S3 backup)
+* Log prediction inputs (hashed/anonymized), outputs, and latency
 
-#### **Database Integration**
-
-* Store predictions and audit logs in **PostgreSQL**
-* Use a **time-series database** for performance metrics
-* Implement **Redis** for feature caching
-* Enable historical prediction analysis
-
-#### **Advanced Explainability**
-
-* Build **interactive SHAP dashboards**
-* Provide **counterfactual (“what-if”) analysis**
-* Track **global and segment-specific feature importance** over time
-
-#### **Scaling & Performance**
-
-* Serve models with **TorchServe** or **TensorFlow Serving**
-* Enable **GPU acceleration** for batch predictions
-* Implement **distributed training** using **Ray** or **Spark**
-* Explore **edge deployment** for low-latency use cases
-
-#### **Data Quality Dashboard**
-
-* Enable real-time **Great Expectations** monitoring
-* Generate **data quality scorecards and reports**
-* Integrate with BI tools (**Tableau**, **Power BI**)
-
-#### **Compliance & Governance**
-
-* Track **model versioning and lineage**
-* Add **GDPR compliance** features (data deletion, right to explanation)
-* Monitor **bias and fairness metrics**
-* Maintain **audit logs** for regulatory compliance
+→ *Helps detect issues, bias, or misuse.*
 
 ---
 
-## 🏁 Summary of Key Learnings
+### **API Enhancements**
 
-* Strong hands-on experience in MLOps pipeline design and debugging
-* Deep understanding of CI/CD, containerization, and model deployment
-* Improved problem-solving and system design thinking
-* Ready for real-world production ML system implementation
+**Why:** Improve usability and scalability of your inference service.
+**What to implement:**
+
+* **Batch prediction endpoint** (`/predict-batch`)
+* **JWT authentication** for API security
+* **OpenAPI/Swagger** docs for clear usage
+* Optional: **Celery + Redis** if you add async predictions later
+
+→ *Makes your model API production-grade.*
+
 
 ---
+
+
+---
+
+## **Summary of Key Learnings**
+
+- **Mastered end-to-end MLOps pipeline development**, from robust data engineering to scalable model deployment in cloud environments.
+- **Built advanced CI/CD automation and containerization workflows**, enabling seamless, enterprise-grade ML releases.
+- **Developed deep expertise in ML experiment tracking, model versioning, and reproducible research** using industry-standard tools like MLflow and Docker.
+- **Refined system design and troubleshooting skills**, consistently overcoming real-world challenges in automation, scalability, and reliability.
+- **Proven ability to deliver production-ready ML solutions**, positioned for immediate impact in demanding, fast-paced industry settings.
+---
+
+## **Contact**
+
+- **Author:** Munna  
+- **GitHub:** [Munna-Git](https://github.com/Munna-Git)  
+- **Email:** [munna88mn@gmail.com](mailto:munna88mn@gmail.com)
