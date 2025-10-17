@@ -1,6 +1,5 @@
-# app/train_entrypoint.py
+# app/train_entrypoint.py - WITH YAML DATA VALIDATION
 
-# Feature and Training Pipeline
 from dotenv import load_dotenv
 import os
 import logging
@@ -11,9 +10,9 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from src.data.clean_data import TrainingPipeline
 from src.data.train_test_split import split_data, save_data
 from src.models.train_model import train_xgb_model, evaluate_model, save_model
+from src.utils.data_validator import validate_csv
 import mlflow
 import mlflow.xgboost
-
 
 # Load environment variables
 load_dotenv()
@@ -45,11 +44,9 @@ def ensure_directory_exists(directory: str) -> None:
 
 def main() -> None:
     """Executes the feature preprocessing and model training pipeline."""
-
-   # Configure MLflow
-    mlflow.set_experiment("customer-churn-prediction")
     
-    # Start MLflow run with a descriptive name
+    # Configure MLflow
+    mlflow.set_experiment("customer-churn-prediction")
     run_name = f"xgboost-{datetime.now().strftime('%Y%m%d-%H%M%S')}"
     
     with mlflow.start_run(run_name=run_name) as run:
@@ -65,7 +62,7 @@ def main() -> None:
             mlflow.set_tag("failure_reason", "missing_env_variables")
             return
 
-        # Log configuration parameters
+        # Log configuration
         mlflow.log_param("raw_data_filepath", RAW_DATA_FILEPATH)
         mlflow.log_param("test_size", TEST_SIZE)
         mlflow.log_param("model_filename", MODEL_FILENAME)
@@ -76,7 +73,25 @@ def main() -> None:
         ensure_directory_exists(PROCESSED_DATA_DIR)
         ensure_directory_exists(MODEL_OUTPUT_DIR)
 
-        # Step 1: Clean the raw data using the TrainingPipeline
+        # Step 0 - Validate raw data
+        logging.info("Step 0: Validating raw data schema.")
+        try:
+            is_valid, errors = validate_csv(RAW_DATA_FILEPATH)
+            if not is_valid:
+                logging.error("Data validation failed! Errors found:")
+                for error in errors[:5]:
+                    logging.error(f"  Row {error['row']}: {error['errors']}")
+                mlflow.set_tag("status", "failed")
+                mlflow.set_tag("failure_reason", "data_validation_failed")
+                mlflow.log_param("validation_errors", len(errors))
+                return
+            logging.info("✓ Data validation passed")
+            mlflow.set_tag("data_validation", "success")
+        except Exception as e:
+            logging.warning(f"Could not validate data (validator not found?): {e}")
+            logging.info("Continuing without validation...")
+
+        # Step 1: Clean the raw data
         logging.info("Step 1: Running data cleaning pipeline.")
         try:
             training_pipeline = TrainingPipeline(RAW_DATA_FILEPATH, CLEANED_DATA_FILEPATH)
@@ -89,22 +104,19 @@ def main() -> None:
             mlflow.log_param("error_message", str(e))
             return
 
-        # Step 2: Load cleaned data and split into train-test sets
+        # Step 2: Train-test split
         logging.info("Step 2: Loading cleaned data and performing train-test split.")
         try:
             df = training_pipeline.load_cleaned_data()
             
             # Log data statistics
             mlflow.log_param("total_samples", len(df))
-            mlflow.log_param("n_features", len(df.columns) - 1)  # Exclude target
+            mlflow.log_param("n_features", len(df.columns) - 1)
             mlflow.log_param("target_column", "Exited")
             
-            # Log target distribution
             target_dist = df['Exited'].value_counts()
             mlflow.log_param("class_0_count", int(target_dist.get(0, 0)))
             mlflow.log_param("class_1_count", int(target_dist.get(1, 0)))
-            mlflow.log_param("class_balance_ratio", 
-                           round(target_dist.get(1, 0) / target_dist.get(0, 1), 3))
             
             X_train, X_test, y_train, y_test = split_data(df, target="Exited", test_size=TEST_SIZE)
             save_data(X_train, y_train, "train", PROCESSED_DATA_DIR)
@@ -117,10 +129,9 @@ def main() -> None:
             logging.error(f"Error during train-test split: {e}")
             mlflow.set_tag("status", "failed")
             mlflow.set_tag("failure_reason", "train_test_split_error")
-            mlflow.log_param("error_message", str(e))
             return
 
-        # Step 3: Train the XGBoost model
+        # Step 3: Train model
         logging.info("Step 3: Starting XGBoost model training.")
         try:
             model = train_xgb_model(X_train, y_train)
@@ -130,31 +141,29 @@ def main() -> None:
             logging.error(f"Error during model training: {e}")
             mlflow.set_tag("status", "failed")
             mlflow.set_tag("failure_reason", "model_training_error")
-            mlflow.log_param("error_message", str(e))
             return
 
-        # Step 4: Evaluate the trained model
+        # Step 4: Evaluate model
         logging.info("Step 4: Evaluating the trained model.")
         try:
             y_pred, metrics = evaluate_model(model, X_test, y_test)
             logging.info("Model evaluation completed successfully.")
             mlflow.set_tag("model_evaluation", "success")
             
-            # Log confusion matrix as text artifact
+            # Log confusion matrix
             conf_matrix_str = f"Confusion Matrix:\n{metrics['confusion_matrix']}"
             with open("confusion_matrix.txt", "w") as f:
                 f.write(conf_matrix_str)
             mlflow.log_artifact("confusion_matrix.txt")
-            os.remove("confusion_matrix.txt")  # Clean up
+            os.remove("confusion_matrix.txt")
             
         except Exception as e:
             logging.error(f"Error during model evaluation: {e}")
             mlflow.set_tag("status", "failed")
             mlflow.set_tag("failure_reason", "model_evaluation_error")
-            mlflow.log_param("error_message", str(e))
             return
 
-        # Step 5: Save the trained model
+        # Step 5: Save model
         logging.info("Step 5: Saving the trained model.")
         try:
             save_model(model, MODEL_FILENAME)
@@ -165,7 +174,6 @@ def main() -> None:
             logging.error(f"Error while saving the model: {e}")
             mlflow.set_tag("status", "failed")
             mlflow.set_tag("failure_reason", "model_saving_error")
-            mlflow.log_param("error_message", str(e))
             return
 
         logging.info("="*60)

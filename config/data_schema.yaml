@@ -1,0 +1,78 @@
+# config/data_schema.yaml - Customer Churn Data Validation
+
+CustomerId:
+  type: integer
+  min: 10000000
+  max: 99999999
+  required: true
+
+CreditScore:
+  type: integer
+  min: 300
+  max: 850
+  required: true
+
+Geography:
+  type: string
+  allowed: ['France', 'Germany', 'Spain']
+  required: true
+
+Gender:
+  type: string
+  allowed: ['Male', 'Female']
+  required: true
+
+Age:
+  type: integer
+  min: 18
+  max: 100
+  required: true
+
+Tenure:
+  type: integer
+  min: 0
+  max: 10
+  required: true
+
+Balance:
+  type: float
+  min: 0
+  required: true
+
+NumOfProducts:
+  type: integer
+  min: 1
+  max: 4
+  required: true
+
+HasCrCard:
+  type: integer
+  allowed: [0, 1]
+  required: true
+
+IsActiveMember:
+  type: integer
+  allowed: [0, 1]
+  required: true
+
+EstimatedSalary:
+  type: float
+  min: 0
+  max: 250000
+  required: true
+
+SatisfactionScore:
+  type: integer
+  min: 1
+  max: 5
+  required: true
+
+CardType:
+  type: string
+  allowed: ['DIAMOND', 'GOLD', 'PLATINUM', 'SILVER']
+  required: true
+
+PointEarned:
+  type: integer
+  min: 0
+  required: true
