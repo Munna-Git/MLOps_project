@@ -21,7 +21,20 @@ Dockerfile
 
 # Ignore local notebooks and data files
 *.ipynb
-data/
+
+# Ignore all data by default
+data/*
+
+# But keep the inference file
+!data/raw/InferenceData.csv
+
+# (Optional) also keep __init__.py if needed for imports
+!data/raw/__init__.py
+
+# Ignore notebooks and unnecessary CSVs
+data/raw/*.ipynb
+data/raw/Customer-Churn-Records.csv
+
 datasets/
 notebooks/
 
