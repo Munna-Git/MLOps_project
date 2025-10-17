@@ -26,10 +26,8 @@ datasets/
 notebooks/
 
 # Ignore model artifacts if they’re large
-models/
 checkpoints/
 artifacts/
-*.pkl
 *.joblib
 *.h5
 *.onnx
