@@ -7,6 +7,10 @@ ENV PYTHONUNBUFFERED=1
 # 3. Set the working directory for subsequent commands
 WORKDIR /app
 
+# Copy model and data files
+COPY models/xgboost_model.pkl /app/models/xgboost_model.pkl
+COPY data/raw/InferenceData.csv /app/data/raw/InferenceData.csv
+
 # 4. Upgrade pip
 RUN python -m pip install --upgrade pip
 
