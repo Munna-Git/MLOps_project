@@ -10,6 +10,9 @@
 - **Production-Ready MLOps System:**  
   Delivered a **fully automated pipeline** for **data validation**, **model training**, **deployment**, and **monitoring**-showcasing **end-to-end ML engineering and DevOps integration**.
 
+- **Robust Data Validation:**  
+  Implemented custom validation logic using `data_validator.py` and schema-driven checks with `config/data_schema.yaml` to ensure high data quality before modeling.
+
 - **Cloud-Native & Scalable Infrastructure:**  
   Built using **containerized microservices (Docker)**, **MLflow** for experiment tracking, and **CI/CD workflows (GitHub Actions)**, ensuring **reproducibility**, **maintainability**, and **rapid adaptation**.
 
@@ -36,6 +39,7 @@
 - **Automated CI/CD** with **GitHub Actions**, **unit tests**, and **data validation checks**
 - **Full-featured pipeline:**  
   **data cleaning** → **feature engineering** → **training** → **inference** → **explainability**
+- **Custom validation logic** in `data_validator.py` and schema in `config/data_schema.yaml`
 - **Experiment management** with **MLflow** for reproducible experiments and model registry
 - **API and model deployment automated via Render**
 
@@ -62,7 +66,7 @@
 
 This project implements a **customer churn prediction system** designed with **production-grade MLOps practices**. The system predicts whether a customer will leave a service (churn) based on behavioral and demographic data.
 
-- Automated data validation and quality checks
+- Schema-driven data validation using `data_validator.py` and `config/data_schema.yaml`
 - Modular, testable pipeline architecture
 - REST API for real-time predictions
 - Docker containerization for deployment
@@ -104,6 +108,11 @@ Customer churn directly impacts **revenue and growth**. This system enables busi
 - **Waitress:** Production WSGI server for Flask
 - **Render:** Cloud deployment platform for API hosting
 
+### **Data Validation**
+
+- **Custom Python validation:** `data_validator.py`
+- **Schema configuration:** `config/data_schema.yaml`
+
 ### **Model Explainability**
 
 - **SHAP:** Feature importance and per-prediction explanations for model transparency
@@ -130,7 +139,7 @@ mlops_project/
 │   ├── inference_entrypoint.py          # Entrypoint for inference/prediction API
 │
 ├── config/
-│   ├── data_schema.yaml                 # Validating the schema of the data
+│   ├── data_schema.yaml                 # YAML schema for data validation
 │
 ├── src/
 │   ├── data/
@@ -143,7 +152,7 @@ mlops_project/
 │   │
 │   ├── utils/
 │   │   ├── shap_utils.py                # SHAP explainability utilities
-│       ├── data_validator.py            # Validating the data 
+│       ├── data_validator.py            # Custom data validation logic 
 │
 ├── data/
 │   ├── raw/                             # Raw input data (e.g., Customer-Churn-Records.csv)
@@ -185,36 +194,40 @@ mlops_project/
 **End-to-End Pipeline Flow**  
 The training pipeline is orchestrated through `app/train_entrypoint.py` and executes the following stages:
 
-### **1. Data Loading**
+### **1. Data Validation**
+
+- Data is validated using **custom logic in `data_validator.py`**, powered by the **schema defined in `config/data_schema.yaml`**
+- Ensures data types, required columns, value ranges, and integrity before processing
+
+### **2. Data Loading**
 
 - Raw CSV loaded from `data/raw/Customer-Churn-Records.csv`
 
-### **2. Data Cleaning & Preprocessing**
+### **3. Data Cleaning & Preprocessing**
 
 - Drops unnecessary columns (*RowNumber, Surname, Complain, CustomerId for training*)
 - Renames columns for consistency (*e.g., Satisfaction Score → SatisfactionScore*)
 - One-hot encodes Geography and Gender
 - Ordinal encodes CardType (*SILVER=0, GOLD=1, PLATINUM=2, DIAMOND=3*)
 
-### **3. Train-Test Split**
+### **4. Train-Test Split**
 
 - Stratified split to preserve churn ratio (*default: 90/10*)
 - Saves both CSV and pickle formats
 
-### **4. Model Training**
+### **5. Model Training**
 
 - **XGBoost classifier** with configured hyperparameters
 - Training logged with comprehensive metrics
 
-### **5. Model Evaluation**
+### **6. Model Evaluation**
 
 - Computes **F1, F2, Precision, Recall, Confusion Matrix**
 - Generates **ROC and Precision-Recall curves**
 
-### **6. Model Persistence**
+### **7. Model Persistence**
 
 - Saves model as `.pkl` file
-
 ---
 
 
