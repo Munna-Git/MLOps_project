@@ -129,6 +129,9 @@ mlops_project/
 │   ├── train_entrypoint.py              # Entrypoint for training pipeline
 │   ├── inference_entrypoint.py          # Entrypoint for inference/prediction API
 │
+├── config/
+│   ├── data_schema.yaml                 # Validating the schema of the data
+│
 ├── src/
 │   ├── data/
 │   │   ├── clean_data.py                # Data cleaning and preprocessing logic
@@ -140,6 +143,7 @@ mlops_project/
 │   │
 │   ├── utils/
 │   │   ├── shap_utils.py                # SHAP explainability utilities
+│       ├── data_validator.py            # Validating the data 
 │
 ├── data/
 │   ├── raw/                             # Raw input data (e.g., Customer-Churn-Records.csv)

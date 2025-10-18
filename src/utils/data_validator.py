@@ -52,6 +52,6 @@ def validate_csv(csv_path, schema_path="config/data_schema.yaml"):
     else:
         logger.error(f"✗ Data validation failed:")
         for error in errors[:5]:
-            logger.error(f"  Row {error['row']}: {error['errors']}")
+            logger.error(f"Row {error['row']}: {error['errors']}")
     
     return is_valid, errors
