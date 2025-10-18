@@ -1,5 +1,10 @@
 # config/data_schema.yaml - Customer Churn Data Validation
 
+RowNumber:
+  type: integer
+  min: 1
+  required: true
+
 CustomerId:
   type: integer
   min: 10000000
@@ -61,18 +66,28 @@ EstimatedSalary:
   max: 250000
   required: true
 
-SatisfactionScore:
+Exited:
+  type: integer
+  allowed: [0, 1]
+  required: true
+
+Complain:
+  type: integer
+  allowed: [0, 1]
+  required: true
+
+'Satisfaction Score':
   type: integer
   min: 1
   max: 5
   required: true
 
-CardType:
+'Card Type':
   type: string
   allowed: ['DIAMOND', 'GOLD', 'PLATINUM', 'SILVER']
   required: true
 
-PointEarned:
+'Point Earned':
   type: integer
   min: 0
   required: true
