@@ -13,6 +13,8 @@ class DataValidator:
         with open(schema_path, 'r') as f:
             self.schema = yaml.safe_load(f)
         self.validator = Validator(self.schema)
+        # Allow unknown fields (for columns not in schema)
+        self.validator.allow_unknown = True
     
     def validate_row(self, row_dict):
         """Validate single row"""
@@ -50,6 +52,6 @@ def validate_csv(csv_path, schema_path="config/data_schema.yaml"):
     else:
         logger.error(f"✗ Data validation failed:")
         for error in errors[:5]:
-            logger.error(f"Row {error['row']}: {error['errors']}")
+            logger.error(f"  Row {error['row']}: {error['errors']}")
     
     return is_valid, errors
