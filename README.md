@@ -58,6 +58,7 @@
 - [Experiment Tracking with MLflow](#experiment-tracking-with-mlflow)
 - [Deployment on Render](#deployment-on-render)
 - [MLOps Project - Challenges & Solutions](#mlops-project-challenges--solutions)
+- [Procedure to use the Live Demo](#procedure-to-use-the-live-demo)
 - [Contact](#contact)
 
 ---
@@ -585,6 +586,19 @@ Fully automated deployment pipeline from code commit to DockerHub.
 
 ---
 
+## **Procedure to use the Live Demo**
+
+- Click on this link: https://mlops-project-sxp8.onrender.com
+
+- And you can see the instructions to use the GET method to output a simple prediction or an output with SHAP prediction. For SHAP prediction modify the URL to the following as instructed in the UI of that page:
+
+```
+https://mlops-project-sxp8.onrender.com/score/15619304
+```
+
+- You can then see the prediction for this CustomerID. 
+
+- Try with different CustomerID like: 15737888, 15701354, 15647311, 15634602, 15737888.
 
 ---
 
